@@ -68,7 +68,8 @@ const ResultsTab = ({ data, isSimpleMode }) => {
         return {
           verdict: "Clinical Candidate",
           color: "#10b981",
-          mechanism_title: "Active Inhibition",
+          summary: "This molecule shape is a great match for the brain's target area and can stop the disease pathway.",
+          mechanism_title: "How it Works",
           mechanism_bullets: [
             "Alzheimer's starts with a build-up of sticky proteins in your brain.",
             "This molecule correctly stops the 'worker' that makes these proteins.",
@@ -87,13 +88,18 @@ const ResultsTab = ({ data, isSimpleMode }) => {
         return {
           verdict: "Non-Binding Compound",
           color: "#ef4444",
-          mechanism_title: "Diagnostic Summary",
+          summary_bullets: [
+            "❌ This molecule shape is not a good fit for the target area.",
+            "❌ High risk of not stopping the disease pathway.",
+            "❌ Recommendation: Try a different molecule with a different shape."
+          ],
+          mechanism_title: "Biological Impact",
           mechanism_bullets: [
             "Alzheimer's is caused by sticky proteins that damage the brain.",
             "Our system targets the 'worker' that builds these proteins.",
-            "This specific molecule does not fit the 'worker' correctly.",
-            "Because it doesn't fit, it cannot stop the protein build-up.",
-            "Recommendation: Try a different molecule with a different shape."
+            "Because this molecule doesn't fit, it cannot stop the protein build-up.",
+            "This compound will likely be washed away by the body's natural filters.",
+            "The brain's amyloid-beta levels would remain unchanged by this drug."
           ],
           kinetics_title: "Binding Score",
           kinetics: "Minimal - The molecule is the wrong shape and won't stay attached.",
@@ -154,18 +160,17 @@ const ResultsTab = ({ data, isSimpleMode }) => {
           <h1 className="banner-title">{isActive ? (isSimpleMode ? "Clinical Candidate" : "BACE-1 Inhibitor Detected") : (isSimpleMode ? "Non-Binding Compound" : "Inactive Compound")}</h1>
           <div className="banner-subtitle">
             {isSimpleMode && !isActive ? (
-              <ul style={{ listStyle: 'none', padding: 0, margin: '1rem 0 0 0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {exp.mechanism_bullets?.map((b, i) => (
-                  <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--red)', marginTop: '8px', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.9rem', opacity: 0.85, lineHeight: 1.4 }}>{b}</span>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '1rem 0 0 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {exp.summary_bullets?.map((b, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <span style={{ fontSize: '0.9rem', opacity: 0.9, lineHeight: 1.4, fontWeight: 500, color: 'white' }}>{b}</span>
                   </li>
                 ))}
               </ul>
             ) : (
               <span>
                 {isActive 
-                  ? (isSimpleMode ? "This molecule shape is a great match for the brain's target area." : "High-affinity binding predicted for beta-site amyloid precursor protein cleaving enzyme 1. Analysis conducted via Quantum-Hybrid consensus modeling.")
+                  ? (isSimpleMode ? (exp.summary || "This molecule shape is a great match for the brain's target area.") : "High-affinity binding predicted for beta-site amyloid precursor protein cleaving enzyme 1. Analysis conducted via Quantum-Hybrid consensus modeling.")
                   : (isSimpleMode ? "This molecule shape is not a good fit and cannot stop the disease pathway." : "Insufficient binding affinity detected for BACE-1 active site inhibition. Consider scaffold optimization or alternative targets.")}
               </span>
             )}
