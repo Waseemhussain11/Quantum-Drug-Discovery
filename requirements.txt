@@ -14,3 +14,4 @@ seaborn
 shap
 joblib
 Pillow
+python-dotenv

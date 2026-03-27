@@ -13,6 +13,9 @@ from rdkit.Chem import rdMolDescriptors
 
 sys.path.append("src")
 
+from dotenv import load_dotenv
+load_dotenv() # Load Groq API Key from .env file
+
 app = FastAPI(title="Quantum Drug Discovery API")
 
 app.add_middleware(
