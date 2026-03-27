@@ -246,6 +246,43 @@ const SimulationView = ({ lastResult }) => {
                   Run a prediction on the Dashboard to see fusion results here.
                 </div>
               )}
+              
+              {/* Added: Detail Metrics */}
+              {lastResult && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem' }}>
+                  <div className="glass-card" style={{ padding: '1rem', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Consensus Strength</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--cyan)' }}>
+                        {(lastResult.consensus_strength * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${(lastResult.consensus_strength * 100)}%` }} transition={{ duration: 1 }}
+                        style={{ height: '100%', background: 'linear-gradient(90deg, var(--cyan), var(--purple))', borderRadius: '3px' }} />
+                    </div>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.75rem', lineHeight: 1.4 }}>
+                      High strength indicates both <b>Classical</b> and <b>Quantum</b> models agree on the molecule's chemical activity.
+                    </p>
+                  </div>
+                  
+                  <div className="glass-card" style={{ padding: '1rem', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Quantum Influence</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--purple)' }}>
+                        {(Math.abs(lastResult.quantum_influence) * 100).toFixed(1)}% {lastResult.quantum_influence > 0 ? 'Boost' : 'Shift'}
+                      </span>
+                    </div>
+                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(Math.abs(lastResult.quantum_influence) * 400, 100)}%` }} transition={{ duration: 1 }}
+                        style={{ height: '100%', background: 'var(--purple)', borderRadius: '3px' }} />
+                    </div>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.75rem', lineHeight: 1.4 }}>
+                      The degree to which <b>Quantum Hilbert Space</b> mapping adjusted the baseline classical prediction.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </motion.div>

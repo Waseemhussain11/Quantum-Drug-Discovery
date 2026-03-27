@@ -116,6 +116,14 @@ def predict_smiles(req: PredictRequest):
     prediction = "ACTIVE" if hybrid_prob >= 0.5 else "INACTIVE"
     confidence = hybrid_prob if prediction == "ACTIVE" else 1 - hybrid_prob
     
+    # Calculate Consensus Strength & Quantum Influence
+    # Strength: 1.0 if both models agree strongly, 0.0 if they disagree completely
+    agreement = 1.0 - abs(classical_prob - quantum_prob)
+    consensus_strength = float(agreement)
+    
+    # Quantum Influence: How much the quantum model changed the classical outcome
+    quantum_influence = float(hybrid_prob - classical_prob)
+    
     importances = MODELS["xgb"].feature_importances_
     top_idx = np.argsort(importances)[::-1][:20]
     top_imp = importances[top_idx].tolist()
@@ -130,6 +138,8 @@ def predict_smiles(req: PredictRequest):
         "classical_prob": classical_prob,
         "quantum_prob": quantum_prob,
         "hybrid_prob": hybrid_prob,
+        "consensus_strength": consensus_strength,
+        "quantum_influence": quantum_influence,
         "pca_features": fp_pca[0].tolist(),
         "quantum_angles": fp_scaled[0].tolist(),
         "fingerprint": fp_np.tolist(),
