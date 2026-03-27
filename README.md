@@ -2,7 +2,7 @@
 
 A state-of-the-art drug discovery platform that leverages **Hybrid Quantum-Classical Machine Learning** to predict the inhibition of BACE-1 (Beta-secretase 1), a critical enzyme implicated in Alzheimer's disease.
 
-## 🌌 Core Principles & Ideas
+## 🌌 Core Principles &  Ideas
 
 ### 1. The Subatomic Observer
 The project follows a unique design philosophy called **"The Subatomic Observer."** It treats the user interface as a high-precision optical instrument—layered with depth, utilizing glassmorphism, and pulsating with the energy of molecular simulation. This ensures that complex quantum data feels tangible and intuitive.
@@ -122,3 +122,4 @@ The platform has been validated against the BACE-1 benchmark, achieving:
 *   **Classical Accuracy**: ~82.2%
 *   **Quantum Accuracy**: ~74.0%
 *   **Hybrid Accuracy**: **~84.0%** (2%+ improvement over purely classical)
+...............>
