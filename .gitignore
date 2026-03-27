@@ -1,0 +1,10 @@
+# models/  (Included for hackathon)
+# *.pkl   (Included for hackathon)
+data/
+__pycache__/
+*.pyc
+.deepchem/
+report/benchmark.png
+report/aspirin.png
+*.egg-info/
+.env

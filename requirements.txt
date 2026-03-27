@@ -1,0 +1,16 @@
+deepchem
+rdkit
+qiskit==0.45.3
+qiskit-machine-learning==0.7.2
+qiskit-aer==0.13.3
+qiskit-algorithms==0.3.0
+scikit-learn
+xgboost
+streamlit
+matplotlib
+pandas
+numpy
+seaborn
+shap
+joblib
+Pillow
