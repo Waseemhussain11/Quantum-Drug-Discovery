@@ -51,7 +51,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function Sidebar({ activeView, setActiveView }) {
+function Sidebar({ activeView, setActiveView, goToHome }) {
   const views = [
     { id: 'dashboard', icon: <LayoutDashboard size={20} />, title: 'Dashboard' },
     { id: 'molecular', icon: <Microscope size={20} />, title: 'Molecular Analysis' },
@@ -60,7 +60,7 @@ function Sidebar({ activeView, setActiveView }) {
   ];
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo">⚛</div>
+      <div className="sidebar-logo" onClick={goToHome} style={{ cursor: 'pointer' }} title="Reset to Discovery Home">⚛</div>
       <nav className="sidebar-nav">
         {views.map(v => (
           <button key={v.id} className={`sidebar-item ${activeView === v.id ? 'active' : ''}`} title={v.title}
@@ -103,8 +103,8 @@ const ProjectVideo = () => {
 function TopNavbar({ isSimpleMode, setIsSimpleMode, goToHome, searchQuery, setSearchQuery, setSmiles, handlePredict, filteredMolecules, activeView, setActiveView }) {
   return (
     <header className="top-navbar">
-      <div className="navbar-brand" style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.5px', cursor: 'pointer' }} onClick={goToHome}>
-        <span style={{ color: 'var(--cyan)' }}>Quantum</span> Precision
+      <div className="navbar-brand" style={{ fontWeight: 800, fontSize: '1.4rem', letterSpacing: '-1px', cursor: 'pointer', gap: 0 }} onClick={goToHome}>
+        Ren<span style={{ color: 'var(--cyan)' }}>Q</span>
       </div>
 
       <div className="navbar-links" style={{ marginLeft: '3rem' }}>
@@ -606,7 +606,7 @@ const LoadingOverlay = () => {
 };
 
 function MainContent() {
-  const [smiles, setSmiles] = useState('CC(=O)Oc1ccccc1C(=O)O');
+  const [smiles, setSmiles] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
@@ -614,13 +614,30 @@ function MainContent() {
   const [benchmarks, setBenchmarks] = useState(null);
   const [comparisonList, setComparisonList] = useState([]);
   const [isSimpleMode, setIsSimpleMode] = useState(false);
-  const [activeView, setActiveView] = useState('dashboard');
+
+  useEffect(() => {
+    if (isSimpleMode) {
+      setActiveTab('results');
+    }
+  }, [isSimpleMode]);
+
+  const [activeView, setActiveViewInternal] = useState('dashboard');
+
+  // Custom wrapper for setActiveView to handle history
+  const setActiveView = (view, push = true) => {
+    setActiveViewInternal(view);
+    if (push) {
+      window.history.pushState({ view, resultId: result?.id }, '', '');
+    }
+  };
   const [predictionHistory, setPredictionHistory] = useState([]);
 
-  // Search state
+  // Search & AI Resolution state
   const [moleculesList, setMoleculesList] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [suggestedSmiles, setSuggestedSmiles] = useState('');
+  const [isResolving, setIsResolving] = useState(false);
   const searchRef = React.useRef(null);
 
   useEffect(() => {
@@ -639,17 +656,73 @@ function MainContent() {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    // Initial history state
+    if (!window.history.state) {
+      window.history.replaceState({ view: 'dashboard' }, '', '');
+    }
+
+    // Back button listener
+    const handlePopState = (event) => {
+      if (event.state && event.state.view) {
+        setActiveViewInternal(event.state.view);
+        if (event.state.view === 'dashboard') {
+          setResult(null);
+        }
+      } else {
+        setActiveViewInternal('dashboard');
+        setResult(null);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
 
   const filteredMolecules = React.useMemo(() => {
-    if (!searchQuery) return PRESETS; // Show presets when empty
+    if (!searchQuery) return PRESETS;
     const q = searchQuery.toLowerCase();
     return moleculesList.filter(m =>
       m.name.toLowerCase().includes(q) ||
       m.smiles.toLowerCase().includes(q)
-    ).slice(0, 50); // limit to 50 for performance
+    ).slice(0, 50);
   }, [searchQuery, moleculesList]);
+
+  // AI Resolution Effect
+  useEffect(() => {
+    if (!searchQuery || searchQuery.length < 3 || searchQuery.includes('=') || searchQuery.includes('(')) {
+      setSuggestedSmiles('');
+      return;
+    }
+
+    // Check if it's already a known molecule
+    const isKnown = filteredMolecules.some(m => m.name.toLowerCase() === searchQuery.toLowerCase());
+    if (isKnown) {
+      setSuggestedSmiles('');
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsResolving(true);
+      try {
+        const res = await axios.post(`${API_URL}/resolve`, { name: searchQuery });
+        if (res.data.smiles) {
+          setSuggestedSmiles(res.data.smiles);
+        } else {
+          setSuggestedSmiles('');
+        }
+      } catch (err) {
+        console.error("AI Resolution Error:", err);
+      } finally {
+        setIsResolving(false);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, filteredMolecules]);
 
   const [showComingSoon, setShowComingSoon] = useState(false);
 
@@ -659,15 +732,17 @@ function MainContent() {
   };
 
   const handlePredict = async () => {
+    if (!smiles || smiles.trim().length < 3) {
+      setError("Please enter a valid SMILES or molecule name.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const res = await axios.post(`${API_URL}/predict`, { smiles });
-      const resultData = { ...res.data, smiles };
+      const resultData = { ...res.data, smiles, id: Date.now() };
       setResult(resultData);
-      setActiveTab('results');
-      setActiveView('dashboard');
-      // Add to history
+      
       const historyEntry = {
         ...res.data,
         smiles,
@@ -676,6 +751,7 @@ function MainContent() {
         fullResult: resultData,
       };
       setPredictionHistory(prev => [historyEntry, ...prev]);
+      window.history.pushState({ view: 'dashboard', resultId: resultData.id }, '', '');
     } catch (err) {
       setError(err.response?.data?.detail || err.message || "An API error occurred");
     } finally {
@@ -722,14 +798,14 @@ function MainContent() {
         {loading && <LoadingOverlay />}
       </AnimatePresence>
       <ParticleBackground />
-      <Sidebar activeView={activeView} setActiveView={setActiveView} />
+      <Sidebar activeView={activeView} setActiveView={setActiveView} goToHome={goToHome} />
 
       <div className="main-area">
-        <TopNavbar 
+        <TopNavbar
           activeView={activeView}
           setActiveView={setActiveView}
-          isSimpleMode={isSimpleMode} 
-          setIsSimpleMode={setIsSimpleMode} 
+          isSimpleMode={isSimpleMode}
+          setIsSimpleMode={setIsSimpleMode}
           goToHome={goToHome}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -765,7 +841,7 @@ function MainContent() {
               {/* HERO SPLIT LAYOUT */}
               <div className="hero-split">
                 <div className="hero-left">
-                  <div className="hero-badge"><span className="hero-badge-dot"></span> PHASE-SHIFT NEURAL ENGINE V4.0</div>
+                  <div className="hero-badge"><span className="hero-badge-dot"></span> BACE-1 SUBATOMIC HYBRID PIPELINE v4.2</div>
                   <h1 className="hero-title">Beyond the<br /><span className="gradient-text">Subatomic<br />Void</span></h1>
                   <p className="hero-subtitle">
                     Revolutionizing Alzheimer's drug discovery through massive-scale quantum entanglement simulations. Predict BACE-1 inhibitor potency with 10⁻⁴ Ångström precision.
@@ -777,15 +853,34 @@ function MainContent() {
                     <input
                       type="text"
                       className="initiator-input"
-                      placeholder="Paste SMILES (e.g., CC1=C(C=..."
+                      placeholder="Name or SMILES (e.g., Aspirin)..."
                       value={searchQuery}
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
                         setSmiles(e.target.value);
                         setShowDropdown(true);
                       }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Tab' && suggestedSmiles) {
+                          e.preventDefault();
+                          setSmiles(suggestedSmiles);
+                          setSearchQuery(suggestedSmiles);
+                          setSuggestedSmiles('');
+                        }
+                        if (e.key === 'Enter') {
+                          handlePredict();
+                        }
+                      }}
                       onFocus={() => setShowDropdown(true)}
                     />
+                    <div className="ai-indicator">
+                      {isResolving && <span className="resolving-text">RenQ is thinking...</span>}
+                      {suggestedSmiles && !isResolving && (
+                        <span className="suggestion-text">
+                          AI Suggests: <span className="ghost-smiles">{suggestedSmiles}</span> <span className="tab-badge">TAB</span>
+                        </span>
+                      )}
+                    </div>
                     <button className="initiator-btn" onClick={handlePredict} disabled={loading}>
                       {loading ? <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>⟳</motion.div> : 'INITIATE PROTOCOL ⚡'}
                     </button>
@@ -875,16 +970,33 @@ function MainContent() {
                   <button className={`tab-btn ${activeTab === 'results' ? 'active' : ''}`} onClick={() => setActiveTab('results')}>
                     <Activity size={16} style={{ marginRight: 6 }} /> Consensus
                   </button>
-                  <button className={`tab-btn ${activeTab === 'molecule' ? 'active' : ''}`} onClick={() => setActiveTab('molecule')}>
+                  
+                  <button 
+                    className={`tab-btn ${activeTab === 'molecule' ? 'active' : ''} ${isSimpleMode ? 'disabled-tab' : ''}`} 
+                    onClick={() => !isSimpleMode && setActiveTab('molecule')}
+                    title={isSimpleMode ? "Expert Mode Only" : ""}
+                  >
                     <Beaker size={16} style={{ marginRight: 6 }} /> Molecular
                   </button>
-                  <button className={`tab-btn ${activeTab === 'quantum' ? 'active' : ''}`} onClick={() => setActiveTab('quantum')}>
+                  <button 
+                    className={`tab-btn ${activeTab === 'quantum' ? 'active' : ''} ${isSimpleMode ? 'disabled-tab' : ''}`} 
+                    onClick={() => !isSimpleMode && setActiveTab('quantum')}
+                    title={isSimpleMode ? "Expert Mode Only" : ""}
+                  >
                     <Zap size={16} style={{ marginRight: 6 }} /> Quantum
                   </button>
-                  <button className={`tab-btn ${activeTab === 'technical' ? 'active' : ''}`} onClick={() => setActiveTab('technical')}>
+                  <button 
+                    className={`tab-btn ${activeTab === 'technical' ? 'active' : ''} ${isSimpleMode ? 'disabled-tab' : ''}`} 
+                    onClick={() => !isSimpleMode && setActiveTab('technical')}
+                    title={isSimpleMode ? "Expert Mode Only" : ""}
+                  >
                     <BarChart2 size={16} style={{ marginRight: 6 }} /> Diagnostics
                   </button>
-                  <button className={`tab-btn ${activeTab === 'compare' ? 'active' : ''}`} onClick={() => setActiveTab('compare')}>
+                  <button 
+                    className={`tab-btn ${activeTab === 'compare' ? 'active' : ''} ${isSimpleMode ? 'disabled-tab' : ''}`} 
+                    onClick={() => !isSimpleMode && setActiveTab('compare')}
+                    title={isSimpleMode ? "Expert Mode Only" : ""}
+                  >
                     <GitCompareArrows size={16} style={{ marginRight: 6 }} /> Compare
                     {comparisonList.length > 0 && <span className="tab-badge">{comparisonList.length}</span>}
                   </button>
