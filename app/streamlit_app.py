@@ -141,7 +141,12 @@ def load_models():
     qsvm_model = joblib.load("models/quantum_svm.pkl")
     pca        = joblib.load("models/pca.pkl")
     scaler     = joblib.load("models/scaler.pkl")
-    return xgb_model, qsvm_model, pca, scaler
+    try:
+        top_256_idx = np.load("models/top_256_idx.npy")
+    except:
+        top_256_idx = None
+        
+    return xgb_model, qsvm_model, pca, scaler, top_256_idx
 
 def smiles_to_fingerprint(smiles, n_bits=1024):
     mol = Chem.MolFromSmiles(smiles)
@@ -196,15 +201,24 @@ def get_3d_html(smiles):
     except:
         return None
 
-def run_hybrid_prediction(smiles, xgb_model, qsvm_model, pca, scaler):
+def run_hybrid_prediction(smiles, xgb_model, qsvm_model, pca, scaler, top_256_idx):
     fp = smiles_to_fingerprint(smiles)
     if fp is None: return None
     fp_2d            = fp.reshape(1, -1)
     classical_prob   = float(xgb_model.predict_proba(fp_2d)[0][1])
-    fp_pca           = pca.transform(fp_2d)
+    
+    # Prune before PCA
+    fp_qsvm_input    = fp_2d[:, top_256_idx] if top_256_idx is not None else fp_2d
+    fp_pca           = pca.transform(fp_qsvm_input)
     fp_scaled        = scaler.transform(fp_pca)
     quantum_prob     = float(qsvm_model.predict_proba(fp_scaled)[0][1])
-    hybrid_prob      = (0.6 * classical_prob) + (0.4 * quantum_prob)
+    
+    # Dynamic Smart Weighting
+    c_uncertainty = abs(classical_prob - 0.5) * 2
+    classical_weight = max(0.2, min(0.9, c_uncertainty + 0.1))
+    quantum_weight = 1.0 - classical_weight
+    
+    hybrid_prob      = (classical_weight * classical_prob) + (quantum_weight * quantum_prob)
     prediction       = "ACTIVE" if hybrid_prob >= 0.5 else "INACTIVE"
     return {
         "prediction": prediction, "hybrid_prob": hybrid_prob, "classical_prob": classical_prob,
@@ -252,7 +266,7 @@ dark_layout = dict(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", 
                    xaxis=dict(showgrid=False, zeroline=False), yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.1)", zeroline=False))
 
 def create_benchmark_plotly():
-    models, acc, roc = ["Classical XGBoost", "Quantum SVM", "Hybrid"], [82.2, 74.0, 84.0], [0.9225, 0.8487, 0.9400]
+    models, acc, roc = ["Classical XGBoost", "Smart Quantum SVM", "Dynamic Hybrid"], [86.0, 40.0, 80.0], [0.9157, 0.5000, 0.7500]
     colors = ["#00d4ff", "#9467bd", "#00ff88"]
     fig = make_subplots(rows=1, cols=2, subplot_titles=("Accuracy (%)", "ROC-AUC Score"))
     fig.add_trace(go.Bar(x=models, y=acc, marker_color=colors, text=[f"{v}%" for v in acc], textposition='auto'), row=1, col=1)
@@ -284,8 +298,8 @@ def create_heatmap_plotly(fp):
 
 def create_pca_plotly(pca_vals, scaled_vals):
     fig = make_subplots(rows=1, cols=2, subplot_titles=("PCA Features", "Quantum Angles [0, π]"))
-    fig.add_trace(go.Bar(x=[f"PC{i+1}" for i in range(8)], y=pca_vals[0], marker_color="#9467bd"), row=1, col=1)
-    fig.add_trace(go.Bar(x=[f"Q{i+1}" for i in range(8)], y=scaled_vals[0], marker_color="#00d4ff"), row=1, col=2)
+    fig.add_trace(go.Bar(x=[f"PC{i+1}" for i in range(10)], y=pca_vals[0], marker_color="#9467bd"), row=1, col=1)
+    fig.add_trace(go.Bar(x=[f"Q{i+1}" for i in range(10)], y=scaled_vals[0], marker_color="#00d4ff"), row=1, col=2)
     fig.add_hline(y=np.pi, line_dash="dash", line_color="#ff3b30", annotation_text="π", row=1, col=2)
     fig.update_layout(**dark_layout, showlegend=False, height=350, margin=dict(t=50, l=0, r=0, b=0))
     return fig
@@ -301,18 +315,18 @@ def create_feature_importance_plotly(xgb_model, fp):
     return fig
 
 def create_bloch_sphere_plotly(fp_scaled):
-    angles = fp_scaled[0][:8]
-    fig = make_subplots(rows=2, cols=4, specs=[[{'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}],
-                                               [{'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}]])
+    angles = fp_scaled[0][:10]
+    fig = make_subplots(rows=2, cols=5, specs=[[{'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}],
+                                               [{'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}]])
     u = np.linspace(0, 2 * np.pi, 20); v = np.linspace(0, np.pi, 20)
     x = np.outer(np.cos(u), np.sin(v)); y = np.outer(np.sin(u), np.sin(v)); z = np.outer(np.ones(np.size(u)), np.cos(v))
-    for i in range(8):
-        row, col = i // 4 + 1, i % 4 + 1
+    for i in range(10):
+        row, col = i // 5 + 1, i % 5 + 1
         fig.add_trace(go.Surface(x=x, y=y, z=z, opacity=0.1, showscale=False, colorscale=[[0, '#9467bd'], [1, '#9467bd']]), row=row, col=col)
         theta, phi = angles[i], angles[i] * 2
         qx, qy, qz = np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)
         fig.add_trace(go.Scatter3d(x=[0, qx], y=[0, qy], z=[0, qz], mode='lines', line=dict(color='#00d4ff', width=5)), row=row, col=col)
-    fig.update_layout(height=500, showlegend=False, margin=dict(l=0, r=0, b=0, t=30), paper_bgcolor="rgba(0,0,0,0)")
+    fig.update_layout(height=400, showlegend=False, margin=dict(l=0, r=0, b=0, t=30), paper_bgcolor="rgba(0,0,0,0)")
     fig.update_scenes(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False)
     return fig
 
@@ -340,8 +354,8 @@ with st.sidebar:
     st.markdown("""
     <div class="glass-card" style="padding: 1rem;">
     <div class="qubit-pulse"></div> <b>System Status:</b> Online<br><br>
-    • <b>Qubits:</b> 8<br>
-    • <b>Feature Map:</b> ZZFeatureMap<br>
+    • <b>Qubits:</b> 10 (Smart Array)<br>
+    • <b>Model:</b> Dynamic Hybrid Consensus<br>
     • <b>Entanglement:</b> Linear<br>
     • <b>Kernel:</b> Fidelity Quantum
     </div>
@@ -358,7 +372,7 @@ with st.sidebar:
     img_thumb = smiles_to_2d_image(example_smiles, size=(200, 150))
     if img_thumb: st.image(img_thumb, use_container_width=True)
     
-    st.markdown("<div style='text-align:center; color:#666; font-size:0.8rem; margin-top:2rem;'>MoleculeNet BACE Dataset • 1,522 items</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center; color:#666; font-size:0.8rem; margin-top:2rem;'>ChEMBL BACE Dataset • 8,748 items</div>", unsafe_allow_html=True)
 
 # ==========================================
 # MAIN APP
@@ -383,8 +397,8 @@ if predict_btn and smiles_input:
     if mol is None: st.error("❌ Invalid SMILES!")
     else:
         with st.spinner("🔄 Initializing Quantum Simulators & Running Pipeline..."):
-            xgb, qsvm, pca, scaler = load_models()
-            res = run_hybrid_prediction(smiles_input, xgb, qsvm, pca, scaler)
+            xgb, qsvm, pca, scaler, top_256 = load_models()
+            res = run_hybrid_prediction(smiles_input, xgb, qsvm, pca, scaler, top_256)
             
         if not res: st.stop()
             
@@ -453,9 +467,9 @@ if predict_btn and smiles_input:
 
 elif not smiles_input:
     c1, c2, c3 = st.columns(3)
-    c1.markdown("<div class='glass-card metric-blue'><p class='metric-label'>XGBoost</p><p class='metric-value'>82.2%</p></div>", unsafe_allow_html=True)
-    c2.markdown("<div class='glass-card metric-purple'><p class='metric-label'>Quantum SVM</p><p class='metric-value'>74.0%</p></div>", unsafe_allow_html=True)
-    c3.markdown("<div class='glass-card metric-green'><p class='metric-label'>Hybrid</p><p class='metric-value'>84.0%</p></div>", unsafe_allow_html=True)
+    c1.markdown("<div class='glass-card metric-blue'><p class='metric-label'>XGBoost</p><p class='metric-value'>86.0%</p></div>", unsafe_allow_html=True)
+    c2.markdown("<div class='glass-card metric-purple'><p class='metric-label'>Quantum SVM (10Q)</p><p class='metric-value'>40.0%</p></div>", unsafe_allow_html=True)
+    c3.markdown("<div class='glass-card metric-green'><p class='metric-label'>Hybrid Consensus</p><p class='metric-value'>80.0%</p></div>", unsafe_allow_html=True)
     st.markdown("<div class='glass-card'><h3>Global Benchmarks</h3>", unsafe_allow_html=True)
     st.plotly_chart(create_benchmark_plotly(), use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)

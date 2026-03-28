@@ -42,6 +42,12 @@ def load_all_models():
         MODELS["qsvm"] = joblib.load("models/quantum_svm.pkl")
         MODELS["pca"] = joblib.load("models/pca.pkl")
         MODELS["scaler"] = joblib.load("models/scaler.pkl")
+        try:
+            MODELS["top_256_idx"] = np.load("models/top_256_idx.npy")
+            print("✅ 256-Feature Filter Mask loaded successfully!")
+        except Exception as e:
+            MODELS["top_256_idx"] = None
+            print("⚠️ 256-Feature Filter Mask not found. Falling back to 1024-bit direct.")
         print("Models loaded successfully!")
     except Exception as e:
         print(f"Error loading models: {e}")
@@ -109,12 +115,27 @@ def predict_smiles(req: PredictRequest):
     
     classical_prob = float(MODELS["xgb"].predict_proba(fp_2d)[0][1])
     
-    fp_pca = MODELS["pca"].transform(fp_2d)
+    # Prune from 1024 down to Top 256 before compressing
+    if "top_256_idx" in MODELS and MODELS["top_256_idx"] is not None:
+        fp_qsvm_input = fp_2d[:, MODELS["top_256_idx"]]
+    else:
+        fp_qsvm_input = fp_2d
+        
+    fp_pca = MODELS["pca"].transform(fp_qsvm_input)
     fp_scaled = MODELS["scaler"].transform(fp_pca)
     
     quantum_prob = float(MODELS["qsvm"].predict_proba(fp_scaled)[0][1])
     
-    hybrid_prob = (0.6 * classical_prob) + (0.4 * quantum_prob)
+    # --- Dynamic Smart Hybrid Engine ---
+    # Calculate Classical Uncertainty (0 = perfectly uncertain, 1 = perfectly certain)
+    c_uncertainty = abs(classical_prob - 0.5) * 2
+    
+    # If classical is very certain, it keeps up to 90% vote.
+    # If classical is very uncertain, quantum gets up to 80% vote.
+    classical_weight = max(0.2, min(0.9, c_uncertainty + 0.1))
+    quantum_weight = 1.0 - classical_weight
+
+    hybrid_prob = (classical_weight * classical_prob) + (quantum_weight * quantum_prob)
     prediction = "ACTIVE" if hybrid_prob >= 0.5 else "INACTIVE"
     confidence = hybrid_prob if prediction == "ACTIVE" else 1 - hybrid_prob
     
@@ -179,7 +200,7 @@ def get_molecule_image(smiles: str):
     return Response(content=buffer.getvalue(), media_type="image/png")
 
 
-# AI Molecule Resolver via Grok (xAI)
+# Molecule Resolver (ChEMBL Database + AI Fallback)
 @app.post("/api/resolve")
 async def resolve_molecule(request: Request):
     data = await request.json()
@@ -189,6 +210,23 @@ async def resolve_molecule(request: Request):
         return {"smiles": None}
     
     try:
+        # Step 1: Try exact database lookup via ChEMBL (100% Truth API)
+        try:
+            from chembl_webresource_client.new_client import new_client
+            molecule = new_client.molecule
+            res = molecule.filter(pref_name__iexact=name)
+            if not res:
+                res = molecule.search(name)
+            
+            if res and len(res) > 0:
+                smiles = res[0].get('molecule_structures', {}).get('canonical_smiles')
+                if smiles:
+                    print(f"✅ Found {name} in ChEMBL Database: {smiles}")
+                    return {"smiles": smiles}
+        except Exception as e:
+            print(f"ChEMBL lookup failed, falling back to LLM: {e}")
+
+        # Step 2: AI Fallback via Groq if not found in database
         import os, requests
         api_key = os.getenv("GROQ_API_KEY")
         
@@ -213,7 +251,9 @@ async def resolve_molecule(request: Request):
             smiles = response.json()["choices"][0]["message"]["content"].strip()
             if smiles.lower() == "none" or len(smiles) < 2:
                 return {"smiles": None}
+            print(f"⚠️ Resolved {name} via AI LLM: {smiles}")
             return {"smiles": smiles}
+            
         return {"smiles": None, "error": f"Groq API Error: {response.status_code}"}
 
     except Exception as e:
