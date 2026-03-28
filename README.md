@@ -123,3 +123,5 @@ The platform has been validated against the BACE-1 benchmark, achieving:
 *   **Quantum Accuracy**: ~74.0%
 *   **Hybrid Accuracy**: **~84.0%** (2%+ improvement over purely classical)
 ...............>
+
+    it's basically best for intial phase of drug discovery and use to save billions of money.
