@@ -14,4 +14,7 @@ seaborn
 shap
 joblib
 Pillow
-python-dotenv
+python-dotenv
+chembl_webresource_client
+tqdm
+
