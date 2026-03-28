@@ -2,8 +2,7 @@ import sys
 import numpy as np
 import io
 import base64
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import joblib
@@ -13,6 +12,9 @@ from rdkit.Chem import Draw, AllChem, Descriptors
 from rdkit.Chem import rdMolDescriptors
 
 sys.path.append("src")
+
+from dotenv import load_dotenv
+load_dotenv() # Load Groq API Key from .env file
 
 app = FastAPI(title="Quantum Drug Discovery API")
 
@@ -176,6 +178,48 @@ def get_molecule_image(smiles: str):
     img.save(buffer, format="PNG")
     return Response(content=buffer.getvalue(), media_type="image/png")
 
+
+# AI Molecule Resolver via Grok (xAI)
+@app.post("/api/resolve")
+async def resolve_molecule(request: Request):
+    data = await request.json()
+    name = data.get("name", "")
+    
+    if not name or len(name) < 2:
+        return {"smiles": None}
+    
+    try:
+        import os, requests
+        api_key = os.getenv("GROQ_API_KEY")
+        
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={
+                "messages": [
+                    {
+                        "role": "system", 
+                        "content": "You are a chemical informatics expert. Given a molecule name, return ONLY its canonical SMILES string. Do not include any other text. If unknown, return 'None'."
+                    },
+                    {"role": "user", "content": name}
+                ],
+                "model": "llama-3.3-70b-versatile",
+                "temperature": 0
+            },
+            timeout=5
+        )
+        
+        if response.status_code == 200:
+            smiles = response.json()["choices"][0]["message"]["content"].strip()
+            if smiles.lower() == "none" or len(smiles) < 2:
+                return {"smiles": None}
+            return {"smiles": smiles}
+        return {"smiles": None, "error": f"Groq API Error: {response.status_code}"}
+
+    except Exception as e:
+        return {"smiles": None, "error": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
