@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Beaker, Zap, BarChart2, LayoutDashboard, Microscope, Atom, Clock, GitCompareArrows, Search, Settings, User, ShieldCheck, Database, Box } from 'lucide-react';
+import { Activity, Beaker, Zap, BarChart2, LayoutDashboard, Microscope, Atom, Clock, GitCompareArrows, Search, Settings, User, ShieldCheck, Database, Box, Sun, Moon } from 'lucide-react';
 import './App.css';
 import ParticleBackground from './components/ParticleBackground';
 import ResultsTab from './components/ResultsTab';
@@ -53,10 +53,10 @@ class ErrorBoundary extends React.Component {
 
 function Sidebar({ activeView, setActiveView, goToHome }) {
   const views = [
-    { id: 'dashboard', icon: <LayoutDashboard size={20} />, title: 'Dashboard' },
-    { id: 'molecular', icon: <Microscope size={20} />, title: 'Molecular Analysis' },
-    { id: 'simulation', icon: <Atom size={20} />, title: 'Quantum Simulation' },
-    { id: 'history', icon: <Clock size={20} />, title: 'Research History' },
+    { id: 'dashboard', icon: <LayoutDashboard size={26} />, title: 'Dashboard' },
+    { id: 'molecular', icon: <Microscope size={26} />, title: 'Molecular Analysis' },
+    { id: 'simulation', icon: <Atom size={26} />, title: 'Quantum Simulation' },
+    { id: 'history', icon: <Clock size={26} />, title: 'Research History' },
   ];
   return (
     <aside className="sidebar">
@@ -100,7 +100,7 @@ const ProjectVideo = () => {
   );
 };
 
-function TopNavbar({ isSimpleMode, setIsSimpleMode, goToHome, searchQuery, setSearchQuery, setSmiles, handlePredict, filteredMolecules, activeView, setActiveView }) {
+function TopNavbar({ isSimpleMode, setIsSimpleMode, theme, setTheme, goToHome, searchQuery, setSearchQuery, setSmiles, handlePredict, filteredMolecules, activeView, setActiveView, showComingSoon }) {
   return (
     <header className="top-navbar">
       <div className="navbar-brand" style={{ fontWeight: 800, fontSize: '1.4rem', letterSpacing: '-1px', cursor: 'pointer', gap: 0 }} onClick={goToHome}>
@@ -135,8 +135,8 @@ function TopNavbar({ isSimpleMode, setIsSimpleMode, goToHome, searchQuery, setSe
         </div>
 
         {/* Search Input from Mockup */}
-        <div className="navbar-search-box" style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', padding: '0.45rem 0.8rem', gap: '0.6rem' }}>
-          <Search size={14} color="var(--cyan)" />
+        <div className="navbar-search-box" style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', padding: '0.6rem 1rem', gap: '0.8rem' }}>
+          <Search size={18} color="var(--cyan)" />
           <input
             type="text"
             placeholder="Search compounds..."
@@ -161,9 +161,31 @@ function TopNavbar({ isSimpleMode, setIsSimpleMode, goToHome, searchQuery, setSe
           />
         </div>
 
-        <Settings size={18} color="var(--text-secondary)" style={{ cursor: 'pointer', transition: 'color 0.2s' }} />
-        <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background 0.2s' }}>
-          <User size={16} color="var(--text-secondary)" />
+        {/* Theme Toggle Button */}
+        <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.1)', padding: '0.2rem', borderRadius: '20px', border: '1px solid var(--border)' }}>
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            style={{
+              width: '46px', height: '24px', borderRadius: '12px',
+              background: theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'var(--cyan)',
+              position: 'relative', border: 'none', cursor: 'pointer', transition: 'background 0.3s'
+            }}
+            title="Toggle Light/Dark Theme"
+          >
+            <div style={{
+              width: '18px', height: '18px', borderRadius: '50%', background: '#fff',
+              position: 'absolute', top: '3px', left: theme === 'dark' ? '3px' : '25px', 
+              transition: 'left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              {theme === 'light' ? <Sun size={12} color="var(--purple)" /> : <Moon size={12} color="#000" />}
+            </div>
+          </button>
+        </div>
+
+        <Settings size={22} color="var(--text-secondary)" style={{ cursor: 'pointer', transition: 'color 0.2s' }} />
+        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background 0.2s' }}>
+          <User size={22} color="var(--text-secondary)" />
         </div>
       </div>
     </header>
@@ -614,6 +636,15 @@ function MainContent() {
   const [benchmarks, setBenchmarks] = useState(null);
   const [comparisonList, setComparisonList] = useState([]);
   const [isSimpleMode, setIsSimpleMode] = useState(false);
+  const [theme, setTheme] = useState('dark');
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light-theme');
+    } else {
+      document.documentElement.classList.remove('light-theme');
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (isSimpleMode) {
@@ -806,6 +837,8 @@ function MainContent() {
           setActiveView={setActiveView}
           isSimpleMode={isSimpleMode}
           setIsSimpleMode={setIsSimpleMode}
+          theme={theme}
+          setTheme={setTheme}
           goToHome={goToHome}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -842,7 +875,7 @@ function MainContent() {
               <div className="hero-split">
                 <div className="hero-left">
                   <div className="hero-badge"><span className="hero-badge-dot"></span> BACE-1 SUBATOMIC HYBRID PIPELINE v4.2</div>
-                  <h1 className="hero-title">Beyond the<br /><span className="gradient-text">Subatomic<br />Void</span></h1>
+                  <h1 className="hero-title" style={{ fontSize: '3.2rem', lineHeight: '1.2', letterSpacing: '-0.5px' }}>Simulate the drug.<br /><span className="gradient-text">Predict the drug.<br />Discover the drug.</span></h1>
                   <p className="hero-subtitle">
                     Revolutionizing Alzheimer's drug discovery through massive-scale quantum entanglement simulations. Predict BACE-1 inhibitor potency with 10⁻⁴ Ångström precision.
                   </p>
