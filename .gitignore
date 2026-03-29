@@ -8,3 +8,10 @@ report/benchmark.png
 report/aspirin.png
 *.egg-info/
 .env
+venv/
+node_modules/
+dist/
+build/
+.vscode/
+.idea/
+*.log

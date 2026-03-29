@@ -13,6 +13,7 @@ import HistoryView from './components/HistoryView';
 import SimulationView from './components/SimulationView';
 import MolecularView from './components/MolecularView';
 import ResearchView from './components/ResearchView';
+import LandingPage from './components/LandingPage';
 
 const API_URL = 'http://localhost:8000/api';
 
@@ -53,7 +54,8 @@ class ErrorBoundary extends React.Component {
 
 function Sidebar({ activeView, setActiveView, goToHome }) {
   const views = [
-    { id: 'dashboard', icon: <LayoutDashboard size={26} />, title: 'Dashboard' },
+    { id: 'landing', icon: <Box size={26} />, title: 'Discovery Home' },
+    { id: 'dashboard', icon: <LayoutDashboard size={26} />, title: 'Screening Lab' },
     { id: 'molecular', icon: <Microscope size={26} />, title: 'Molecular Analysis' },
     { id: 'simulation', icon: <Atom size={26} />, title: 'Quantum Simulation' },
     { id: 'history', icon: <Clock size={26} />, title: 'Research History' },
@@ -108,8 +110,17 @@ function TopNavbar({ isSimpleMode, setIsSimpleMode, theme, setTheme, goToHome, s
       </div>
 
       <div className="navbar-links" style={{ marginLeft: '3rem' }}>
-        <button className={`navbar-link ${activeView !== 'research' ? 'active' : ''}`} onClick={goToHome} title="Return to Core Discovery Engine">Discovery</button>
-        <button className={`navbar-link ${activeView === 'research' ? 'active' : ''}`} onClick={() => setActiveView('research')} title="Access Future Molecular Research Division">Research</button>
+        {activeView === 'research' ? (
+          <>
+            <button className="navbar-link active" onClick={() => setActiveView('research')}>Research</button>
+            <button className="navbar-link" onClick={goToHome}>Back to Lab</button>
+          </>
+        ) : (
+          <>
+            <button className={`navbar-link ${activeView === 'landing' ? 'active' : ''}`} onClick={goToHome} title="Discovery Overview">Overview</button>
+            <button className={`navbar-link ${activeView === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveView('dashboard')} title="Molecular Screening Environment">Screening Lab</button>
+          </>
+        )}
       </div>
 
       <div className="navbar-right-controls" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginLeft: 'auto' }}>
@@ -652,7 +663,7 @@ function MainContent() {
     }
   }, [isSimpleMode]);
 
-  const [activeView, setActiveViewInternal] = useState('dashboard');
+  const [activeView, setActiveViewInternal] = useState('landing');
 
   // Custom wrapper for setActiveView to handle history
   const setActiveView = (view, push = true) => {
@@ -812,7 +823,7 @@ function MainContent() {
     setSearchQuery('');
     setSmiles('');
     setShowDropdown(false);
-    setActiveView('dashboard');
+    setActiveView('landing');
   };
 
   const handleHistorySelect = (entry) => {
@@ -831,7 +842,7 @@ function MainContent() {
       <ParticleBackground />
       <Sidebar activeView={activeView} setActiveView={setActiveView} goToHome={goToHome} />
 
-      <div className="main-area">
+      <div className="main-area" style={{ marginLeft: '96px' }}>
         <TopNavbar
           activeView={activeView}
           setActiveView={setActiveView}
@@ -848,7 +859,12 @@ function MainContent() {
           showComingSoon={showComingSoon}
         />
 
-        <div className="content-wrapper">
+        <div className="content-wrapper" style={{ padding: activeView === 'landing' ? 0 : '1.5rem 2rem' }}>
+          {/* ===== LANDING VIEW ===== */}
+          {activeView === 'landing' && (
+            <LandingPage onExplore={() => setActiveView('dashboard')} />
+          )}
+
           {/* ===== SIDEBAR VIEWS ===== */}
           {activeView === 'molecular' && (
             <MolecularView lastResult={result} smiles={smiles} onSearchMolecule={(s) => { setSmiles(s); setActiveView('dashboard'); }} />
