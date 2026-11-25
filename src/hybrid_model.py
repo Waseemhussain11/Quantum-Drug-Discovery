@@ -4,125 +4,115 @@ from sklearn.metrics import accuracy_score, roc_auc_score, classification_report
 
 
 def load_all_models():
-
     print("\n" + "=" * 50)
-    print("Loading all saved models...")
+    print("Loading all classical ML models...")
     print("=" * 50)
 
-    xgb_model    = joblib.load("models/classical_model.pkl")
-    qsvm_model   = joblib.load("models/quantum_svm.pkl")
-    pca          = joblib.load("models/pca.pkl")
-    scaler       = joblib.load("models/scaler.pkl")
+    xgb_model = joblib.load("models/classical_model.pkl")
+    rf_model  = joblib.load("models/rf_model.pkl")
 
     print("✅ XGBoost model loaded")
-    print("✅ Quantum SVM loaded")
-    print("✅ PCA loaded")
-    print("✅ Scaler loaded")
+    print("✅ Random Forest model loaded")
 
-    return xgb_model, qsvm_model, pca, scaler
+    return xgb_model, rf_model
 
 
-def hybrid_predict(xgb_model, qsvm_model, pca, scaler, X_test, y_test):
-  
-
+def classical_ensemble_predict(xgb_model, rf_model, X_test, y_test=None, weights=(0.55, 0.45)):
+    """
+    Ensemble prediction combining classical XGBoost and Random Forest models
+    on 1024-bit Morgan Fingerprints.
+    """
     print("\n" + "=" * 50)
-    print("Running Hybrid Prediction...")
+    print("Running Classical Ensemble Prediction...")
     print("=" * 50)
 
-    # Step 1: Classical prediction on full 1024 features
+    # Step 1: Classical XGBoost prediction on full 1024 features
     print("\n   Step 1: Classical XGBoost predicting...")
-    classical_prob = xgb_model.predict_proba(X_test)[:, 1]
-    print(f"   ✅ Classical predictions done")
+    xgb_prob = xgb_model.predict_proba(X_test)[:, 1]
+    print(f"   ✅ XGBoost predictions complete")
 
-    # Step 2: Prepare data for quantum model
-    print("\n   Step 2: Preparing data for Quantum model...")
-    try:
-        top_256_idx = np.load("models/top_256_idx.npy")
-        X_test_masked = X_test[:, top_256_idx]
-    except Exception as e:
-        X_test_masked = X_test
-        
-    X_test_pca    = pca.transform(X_test_masked)
-    X_test_scaled = scaler.transform(X_test_pca)
+    # Step 2: Classical Random Forest prediction on full 1024 features
+    print("\n   Step 2: Classical Random Forest predicting...")
+    rf_prob = rf_model.predict_proba(X_test)[:, 1]
+    print(f"   ✅ Random Forest predictions complete")
 
-    # Use subset for quantum speed
-    MAX_TEST = 5
-    if len(X_test_scaled) > MAX_TEST:
-        idx = np.random.choice(len(X_test_scaled), MAX_TEST, replace=False)
-        X_q       = X_test_scaled[idx]
-        y_q       = y_test[idx]
-        c_prob_q  = classical_prob[idx]
-    else:
-        X_q      = X_test_scaled
-        y_q      = y_test
-        c_prob_q = classical_prob
+    # Step 3: Combine predictions via Weighted Consensus
+    print("\n   Step 3: Combining predictions via Classical Consensus...")
+    w_xgb, w_rf = weights
+    total_w = w_xgb + w_rf
+    w_xgb, w_rf = w_xgb / total_w, w_rf / total_w
 
-    # Step 3: Quantum prediction
-    print("\n   Step 3: Quantum SVM predicting...")
-    print(f"   ⏳ Please wait... (Evaluating {MAX_TEST} samples takes ~30 seconds)")
-    quantum_prob = qsvm_model.predict_proba(X_q)[:, 1]
-    print(f"   ✅ Quantum predictions done")
+    ensemble_prob = (w_xgb * xgb_prob) + (w_rf * rf_prob)
+    ensemble_pred = (ensemble_prob >= 0.5).astype(int)
 
-    # Step 4: Combine probabilities (Dynamic Weighting)
-    print("\n   Step 4: Combining predictions via Smart Consensus...")
-    
-    # Calculate Classical Uncertainty
-    c_uncertainty = np.abs(c_prob_q - 0.5) * 2 # Scopes from 0 (perfectly uncertain) to 1 (perfectly certain)
-    
-    # If classical is very certain (c_uncertainty > 0.8), it keeps 90% vote.
-    # If classical is very uncertain (c_uncertainty < 0.2), quantum gets 80% vote.
-    classical_weight = np.clip(c_uncertainty + 0.1, 0.2, 0.9)
-    quantum_weight = 1.0 - classical_weight
+    agreement = 1.0 - np.abs(xgb_prob - rf_prob)
+    consensus_strength = float(np.mean(agreement))
 
-    hybrid_prob = (classical_weight * c_prob_q) + (quantum_weight * quantum_prob)
-    hybrid_pred = (hybrid_prob >= 0.5).astype(int)
-
-    # Evaluate hybrid
-    accuracy = accuracy_score(y_q, hybrid_pred)
-    roc_auc  = roc_auc_score(y_q, hybrid_prob)
-
-    print(f"\n{'=' * 50}")
-    print(f"Results: Dynamic Hybrid Consensus")
-    print(f"{'=' * 50}")
-    print(f"   Accuracy : {accuracy:.4f} ({accuracy*100:.1f}%)")
-    print(f"   ROC-AUC  : {roc_auc:.4f}")
-    print(f"\nDetailed Report:")
-    print(classification_report(
-        y_q, hybrid_pred,
-        target_names=["INACTIVE", "ACTIVE"]
-    ))
-
-    return {
-        "model_name"     : "Dynamic Hybrid Consensus",
-        "accuracy"       : accuracy,
-        "roc_auc"        : roc_auc,
-        "y_pred"         : hybrid_pred,
-        "y_prob"         : hybrid_prob,
-        "classical_prob" : c_prob_q,
-        "quantum_prob"   : quantum_prob
+    results = {
+        "model_name"         : "Classical Ensemble (XGBoost + Random Forest)",
+        "ensemble_prob"      : ensemble_prob,
+        "ensemble_pred"      : ensemble_pred,
+        "xgb_prob"           : xgb_prob,
+        "rf_prob"            : rf_prob,
+        "classical_prob"     : xgb_prob,
+        "rf_score"           : rf_prob,
+        "consensus_strength" : consensus_strength
     }
 
+    if y_test is not None:
+        accuracy = accuracy_score(y_test, ensemble_pred)
+        roc_auc  = roc_auc_score(y_test, ensemble_prob)
+        xgb_acc  = accuracy_score(y_test, (xgb_prob >= 0.5).astype(int))
+        xgb_auc  = roc_auc_score(y_test, xgb_prob)
+        rf_acc   = accuracy_score(y_test, (rf_prob >= 0.5).astype(int))
+        rf_auc   = roc_auc_score(y_test, rf_prob)
 
-def print_final_comparison(classical_acc, quantum_acc, hybrid_acc,
-                            classical_auc, quantum_auc, hybrid_auc):
+        print(f"\n{'=' * 50}")
+        print(f"Results: Classical Ensemble Consensus")
+        print(f"{'=' * 50}")
+        print(f"   Accuracy : {accuracy:.4f} ({accuracy*100:.1f}%)")
+        print(f"   ROC-AUC  : {roc_auc:.4f}")
+        print(f"\nDetailed Report:")
+        print(classification_report(
+            y_test, ensemble_pred,
+            target_names=["INACTIVE", "ACTIVE"]
+        ))
+
+        results.update({
+            "accuracy" : accuracy,
+            "roc_auc"  : roc_auc,
+            "xgb_acc"  : xgb_acc,
+            "xgb_auc"  : xgb_auc,
+            "rf_acc"   : rf_acc,
+            "rf_auc"   : rf_auc,
+        })
+
+    return results
+
+
+# Backward compatibility alias
+hybrid_predict = classical_ensemble_predict
+
+
+def print_final_comparison(xgb_acc, rf_acc, ensemble_acc,
+                            xgb_auc, rf_auc, ensemble_auc):
     print("\n" + "=" * 50)
-    print("FINAL COMPARISON — ALL MODELS (1000 TEST SAMPLES)")
+    print("FINAL COMPARISON — ALL CLASSICAL MODELS")
     print("=" * 50)
-    print(f"{'Model':<30} {'Accuracy':>10} {'ROC-AUC':>10}")
-    print("-" * 50)
-    print(f"{'Classical XGBoost Baseline':<30} {classical_acc*100:>9.1f}% {classical_auc:>10.4f}")
-    print(f"{'Smart Quantum Specialist':<30} {quantum_acc*100:>9.1f}% {quantum_auc:>10.4f}")
-    print(f"{'Dynamic Hybrid Engine':<30} {hybrid_acc*100:>9.1f}% {hybrid_auc:>10.4f}")
-    print("=" * 50)
+    print(f"{'Model':<35} {'Accuracy':>10} {'ROC-AUC':>10}")
+    print("-" * 55)
+    print(f"{'Classical XGBoost':<35} {xgb_acc*100:>9.1f}% {xgb_auc:>10.4f}")
+    print(f"{'Classical Random Forest':<35} {rf_acc*100:>9.1f}% {rf_auc:>10.4f}")
+    print(f"{'Classical Ensemble Consensus':<35} {ensemble_acc*100:>9.1f}% {ensemble_auc:>10.4f}")
+    print("=" * 55)
 
-    # Check improvement
-    improvement = hybrid_acc - classical_acc
-    if improvement > 0:
-        print(f"\n✅ Hybrid beats Classical by {improvement*100:.1f}%!")
+    improvement = ensemble_acc - max(xgb_acc, rf_acc)
+    if improvement >= 0:
+        print(f"\n✅ Ensemble matches or exceeds individual baselines!")
     else:
-        print(f"\n⚠️  Classical still holds the lead. Quantum needs more qubits or data.")
+        print(f"\nℹ️ Individual models perform strongly on test set.")
 
-    print("\n🎉 hybrid_model.py working perfectly!")
+    print("\n🎉 hybrid_model.py working perfectly with pure classical ML!")
 
 
 if __name__ == "__main__":
@@ -132,27 +122,18 @@ if __name__ == "__main__":
 
     X_train, X_test, y_train, y_test = load_bace_data()
 
-    xgb_model, qsvm_model, pca, scaler = load_all_models()
+    xgb_model, rf_model = load_all_models()
 
-    hybrid_results = hybrid_predict(
-        xgb_model, qsvm_model,
-        pca, scaler,
+    ensemble_results = classical_ensemble_predict(
+        xgb_model, rf_model,
         X_test, y_test
     )
 
-    # Evaluate Quantum on the same 1000 points to show full chart
-    # (Extracting from the saved dictionary)
-    y_true = y_test[:len(hybrid_results["quantum_prob"])] # Align lengths
-    # Evaluate pure quantum
-    q_pred = (hybrid_results["quantum_prob"] >= 0.5).astype(int)
-    quantum_accuracy = accuracy_score(y_true, q_pred)
-    quantum_roc = roc_auc_score(y_true, hybrid_results["quantum_prob"])
-
     print_final_comparison(
-        classical_acc = 0.8600,   # Phase 1 big-data benchmark
-        quantum_acc   = quantum_accuracy,
-        hybrid_acc    = hybrid_results["accuracy"],
-        classical_auc = 0.9157,
-        quantum_auc   = quantum_roc,
-        hybrid_auc    = hybrid_results["roc_auc"]
+        xgb_acc      = ensemble_results["xgb_acc"],
+        rf_acc       = ensemble_results["rf_acc"],
+        ensemble_acc = ensemble_results["accuracy"],
+        xgb_auc      = ensemble_results["xgb_auc"],
+        rf_auc       = ensemble_results["rf_auc"],
+        ensemble_auc = ensemble_results["roc_auc"]
     )

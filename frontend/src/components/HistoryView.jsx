@@ -24,7 +24,7 @@ const HistoryView = ({ history, onSelectMolecule, onClearHistory }) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `quantum-research-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `drug-discovery-research-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -45,7 +45,7 @@ const HistoryView = ({ history, onSelectMolecule, onClearHistory }) => {
             Research History
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-            Session log of all quantum-classical predictions
+            Session log of all classical machine learning predictions
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -130,21 +130,21 @@ const HistoryView = ({ history, onSelectMolecule, onClearHistory }) => {
               {/* Scores */}
               <div style={{ display: 'flex', gap: '1.25rem', flexShrink: 0 }}>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classical</div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>XGBoost</div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--cyan)' }}>
                     {((entry.classical_prob !== undefined ? entry.classical_prob * 100 : (entry.classical_score || 0))).toFixed(1)}%
                   </div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quantum</div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Random Forest</div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--purple)' }}>
-                    {((entry.quantum_prob !== undefined ? entry.quantum_prob * 100 : (entry.quantum_score || 0))).toFixed(1)}%
+                    {((entry.rf_prob !== undefined ? entry.rf_prob * 100 : (entry.quantum_prob !== undefined ? entry.quantum_prob * 100 : (entry.quantum_score || 0)))).toFixed(1)}%
                   </div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Hybrid</div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ensemble</div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: entry.prediction === 'ACTIVE' ? 'var(--green)' : 'var(--red)' }}>
-                    {((entry.hybrid_prob !== undefined ? entry.hybrid_prob * 100 : (entry.hybrid_score || 0))).toFixed(1)}%
+                    {((entry.ensemble_prob !== undefined ? entry.ensemble_prob * 100 : (entry.hybrid_prob !== undefined ? entry.hybrid_prob * 100 : (entry.hybrid_score || 0)))).toFixed(1)}%
                   </div>
                 </div>
               </div>

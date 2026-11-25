@@ -104,13 +104,14 @@ if __name__ == "__main__":
     )
 
     save_model(xgb_model, "classical_model.pkl")
+    save_model(rf_model, "rf_model.pkl")
 
     print("\n" + "=" * 50)
-    print("CLASSICAL BASELINE SUMMARY")
+    print("CLASSICAL MODEL SUMMARY")
     print("=" * 50)
     print(f"   XGBoost Accuracy     : {xgb_results['accuracy']*100:.1f}%")
     print(f"   XGBoost ROC-AUC      : {xgb_results['roc_auc']:.4f}")
     print(f"   Random Forest Acc    : {rf_results['accuracy']*100:.1f}%")
     print(f"   Random Forest ROC-AUC: {rf_results['roc_auc']:.4f}")
-    print("\n🎯 This is our baseline — quantum must beat this!")
+    print("\n🎯 Classical models trained and ready for ensemble inference!")
     print("\n🎉 classical_model.py working perfectly!")

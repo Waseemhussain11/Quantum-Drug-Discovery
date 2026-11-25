@@ -74,7 +74,7 @@ const ResultsTab = ({ data, isSimpleMode }) => {
             "Alzheimer's starts with a build-up of sticky proteins in your brain.",
             "This molecule correctly stops the 'worker' that makes these proteins.",
             "We found that it fits perfectly into the brain's target area.",
-            "Our quantum analysis confirms it stays attached to the protein.",
+            "Our ensemble analysis confirms strong binding affinity to the protein.",
             "Status: This is a strong candidate for a new medicine."
           ],
           kinetics_title: "Activity Probability",
@@ -170,7 +170,7 @@ const ResultsTab = ({ data, isSimpleMode }) => {
             ) : (
               <span>
                 {isActive 
-                  ? (isSimpleMode ? (exp.summary || "This molecule shape is a great match for the brain's target area.") : "High-affinity binding predicted for beta-site amyloid precursor protein cleaving enzyme 1. Analysis conducted via Quantum-Hybrid consensus modeling.")
+                  ? (isSimpleMode ? (exp.summary || "This molecule shape is a great match for the brain's target area.") : "High-affinity binding predicted for beta-site amyloid precursor protein cleaving enzyme 1. Analysis conducted via Classical ML Ensemble modeling (XGBoost + Random Forest).")
                   : (isSimpleMode ? "This molecule shape is not a good fit and cannot stop the disease pathway." : "Insufficient binding affinity detected for BACE-1 active site inhibition. Consider scaffold optimization or alternative targets.")}
               </span>
             )}
@@ -195,29 +195,29 @@ const ResultsTab = ({ data, isSimpleMode }) => {
           <div className="gauge-grid">
             <motion.div variants={item}>
               <GaugeCard 
-                title="CLASSICAL SCORE" 
+                title="XGBOOST SCORE" 
                 icon={Laptop} 
                 percentage={classical_prob * 100} 
                 gradientColors={["#a855f7", "#c084fc"]} 
-                description="Molecular dynamics and traditional docking affinity baseline." 
+                description="Gradient boosted decision trees trained on 1024-bit Morgan fingerprints." 
               />
             </motion.div>
             <motion.div variants={item}>
               <GaugeCard 
-                title="QUANTUM SCORE" 
+                title="RANDOM FOREST SCORE" 
                 icon={Grid} 
-                percentage={quantum_prob * 100} 
+                percentage={(data.rf_prob !== undefined ? data.rf_prob : quantum_prob) * 100} 
                 gradientColors={["#06b6d4", "#67e8f9"]} 
-                description="Subatomic interaction mapping and electron density probability." 
+                description="Bagged decision trees ensemble with balanced class weighting." 
               />
             </motion.div>
             <motion.div variants={item}>
               <GaugeCard 
-                title="HYBRID FUSION" 
+                title="ENSEMBLE CONSENSUS" 
                 icon={Share2} 
-                percentage={hybrid_prob * 100} 
+                percentage={(data.ensemble_prob !== undefined ? data.ensemble_prob : hybrid_prob) * 100} 
                 gradientColors={["#10b981", "#6ee7b7"]} 
-                description="Aggregated confidence interval across multi-agent solvers." 
+                description="Weighted consensus model (55% XGBoost + 45% Random Forest)." 
               />
             </motion.div>
           </div>
@@ -233,17 +233,17 @@ const ResultsTab = ({ data, isSimpleMode }) => {
                 <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
                   <motion.div initial={{ width: 0 }} animate={{ width: `${(data.consensus_strength * 100) || 0}%` }} style={{ height: '100%', background: 'var(--cyan)' }} />
                 </div>
-                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0 }}>Model agreement across 256D Hilbert space mapping.</p>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0 }}>Model agreement across 1024-bit Morgan fingerprint feature space.</p>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, letterSpacing: '1px' }}>QUANTUM INFLUENCE</div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--purple)', fontWeight: 800 }}>{(Math.abs(data.quantum_influence || 0) * 100).toFixed(1)}% {data.quantum_influence > 0 ? 'Boost' : 'Shift'}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, letterSpacing: '1px' }}>RF DELTA INFLUENCE</div>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--purple)', fontWeight: 800 }}>{(Math.abs(data.rf_influence !== undefined ? data.rf_influence : data.quantum_influence || 0) * 100).toFixed(1)}% {(data.rf_influence ?? data.quantum_influence) > 0 ? 'Boost' : 'Shift'}</div>
                 </div>
                 <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(Math.abs(data.quantum_influence || 0) * 400, 100)}%` }} style={{ height: '100%', background: 'var(--purple)' }} />
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(Math.abs(data.rf_influence !== undefined ? data.rf_influence : data.quantum_influence || 0) * 400, 100)}%` }} style={{ height: '100%', background: 'var(--purple)' }} />
                 </div>
-                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0 }}>Deviation from classical baseline via subatomic dynamics.</p>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0 }}>Variance from XGBoost baseline via Random Forest bagged trees.</p>
               </div>
             </div>
           </motion.div>

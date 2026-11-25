@@ -51,10 +51,10 @@ function useCounter(target, duration = 2000) {
 }
 
 export default function LandingPage({ onExplore }) {
-  const [accCount, accRef] = useCounter(86);
-  const [aucCount, aucRef] = useCounter(0.9400);
-  const [qubitCount, qubitRef] = useCounter(10);
-  const [molCount, molRef] = useCounter(8748);
+  const [accCount, accRef] = useCounter(93.4);
+  const [aucCount, aucRef] = useCounter(0.9654);
+  const [treeCount, treeRef] = useCounter(400);
+  const [molCount, molRef] = useCounter(1513);
 
   const { scrollYProgress } = useScroll();
   const yValue = useTransform(scrollYProgress, [0, 1], ['0%', '20%']);
@@ -83,7 +83,7 @@ export default function LandingPage({ onExplore }) {
               <span style={{ color: 'var(--cyan)' }}>Atom by Atom.</span>
             </motion.h1>
             <motion.p style={{ fontSize: '1.4rem', color: 'var(--text-secondary)', marginBottom: '0', margin: '0 auto', maxWidth: '600px', lineHeight: 1.6 }} variants={fadeInUp}>
-              A Human-Centric Quantum Approach to Alzheimer's BACE-1 Target.
+              A Machine Learning Ensemble Approach to Alzheimer's BACE-1 Target.
             </motion.p>
           </motion.div>
 
@@ -99,7 +99,7 @@ export default function LandingPage({ onExplore }) {
 
             <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: '24px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden', position: 'relative', background: 'radial-gradient(circle at center, rgba(6,182,212,0.1) 0%, transparent 70%)' }}>
               <div style={{ position: 'absolute', top: '1.5rem', left: '0', width: '100%', textAlign: 'center', zIndex: 2 }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '2px', color: 'var(--cyan)' }}>MIND AFTER QUANTUM-DRUG INTERVENTION</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '2px', color: 'var(--cyan)' }}>MIND AFTER AI-DRUG INTERVENTION</span>
               </div>
               <Brain3D isHealthy={true} />
             </div>
@@ -158,19 +158,19 @@ export default function LandingPage({ onExplore }) {
         </div>
       </section>
 
-      {/* ⚛️ SECTION: THE QUANTUM ADVANTAGE */}
+      {/* 🌲 SECTION: THE CLASSICAL AI ADVANTAGE */}
       <section style={{ padding: '8rem 4rem', maxWidth: '1400px', margin: '0 auto', borderTop: '1px solid var(--border)' }}>
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeInUp}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(168,85,247,0.1)', padding: '0.5rem 1rem', borderRadius: '20px', color: 'var(--purple)', fontWeight: 700, fontSize: '0.8rem', letterSpacing: '1.5px', marginBottom: '1.5rem' }}>
-            <Zap size={16} /> <span>THE QUANTUM ADVANTAGE</span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(6,182,212,0.1)', padding: '0.5rem 1rem', borderRadius: '20px', color: 'var(--cyan)', fontWeight: 700, fontSize: '0.8rem', letterSpacing: '1.5px', marginBottom: '1.5rem' }}>
+            <Zap size={16} /> <span>THE CLASSICAL AI ADVANTAGE</span>
           </div>
-          <h2 style={{ fontSize: '3rem', fontWeight: 700, marginBottom: '4rem', color: 'var(--text-primary)' }}>Why We Need Quantum Systems</h2>
+          <h2 style={{ fontSize: '3rem', fontWeight: 700, marginBottom: '4rem', color: 'var(--text-primary)' }}>Why We Need Advanced ML Ensembles</h2>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
             {[
               { icon: <Target size={32} color="var(--cyan)" />, title: "Who is affected", desc: "Pharmaceutical companies and drug discovery researchers who spend 10-15 years and $2.6 billion developing a single drug, with 90% of candidates failing in clinical trials." },
-              { icon: <ShieldAlert size={32} color="var(--amber)" />, title: "What pain exists", desc: "Classical computers cannot simulate quantum-level molecular interactions, forcing scientists to rely on slow, expensive trial-and-error screening that misses critical binding patterns." },
-              { icon: <Activity size={32} color="var(--red)" />, title: "Why current solution fails", desc: "Traditional machine learning uses simplified approximations that ignore electron correlation effects, resulting in inaccurate binding affinity predictions and high failure rates." }
+              { icon: <ShieldAlert size={32} color="var(--amber)" />, title: "What pain exists", desc: "Traditional wet-lab synthesis relies on slow, expensive trial-and-error screening that misses critical non-linear molecular substructure interactions." },
+              { icon: <Activity size={32} color="var(--red)" />, title: "Why single models struggle", desc: "Single classifiers often overfit on sparse bioactivity data or suffer from class imbalance, requiring dual-ensemble validation with gradient boosting and bagged trees." }
             ].map((card, i) => (
               <motion.div key={i} style={{ background: 'var(--bg-card)', padding: '2.5rem', borderRadius: '20px', border: '1px solid var(--border)', transition: 'transform 0.3s, box-shadow 0.3s' }} whileHover={{ y: -10, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
                 <div style={{ marginBottom: '1.5rem' }}>{card.icon}</div>
@@ -198,7 +198,7 @@ export default function LandingPage({ onExplore }) {
               50 million families worldwide are watching this unfold. They sit beside beds, holding hands that no longer squeeze back, hoping for a cure that has been 10 years and $2.6 billion away — for decades.
             </p>
             <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: '4rem' }}>
-              The pain is not just in what is lost, but in the waiting. The knowing that science has been trying. And failing. Because the molecules we need to understand refuse to behave by classical rules.
+              Early computational screening allows chemists to identify selective BACE-1 inhibitors rapidly before entering costly wet-lab trials.
             </p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', paddingLeft: '2rem', borderLeft: '3px solid var(--border)' }}>
@@ -217,9 +217,9 @@ export default function LandingPage({ onExplore }) {
             </div>
 
             <div style={{ marginTop: '4rem', background: 'linear-gradient(to right, rgba(6,182,212,0.1), transparent)', borderLeft: '4px solid var(--cyan)', padding: '2rem', borderRadius: '0 20px 20px 0' }}>
-              <h3 style={{ fontSize: '1.5rem', color: 'var(--cyan)', marginBottom: '1rem' }}>The Quantum Solution:</h3>
+              <h3 style={{ fontSize: '1.5rem', color: 'var(--cyan)', marginBottom: '1rem' }}>The Classical ML Solution:</h3>
               <p style={{ color: 'var(--text-primary)', fontSize: '1.1rem', lineHeight: 1.7 }}>
-                No cure exists because classical computers can't simulate how molecules bind to BACE-1 with quantum precision. Our quantum model simulates electron-level binding interactions, achieving <strong>86% accuracy</strong> — identifying drug candidates that stop plaques before they form.
+                Our ensemble fuses XGBoost and Random Forest over 1024-bit Morgan circular fingerprints, achieving <strong>93.4% test accuracy</strong> and <strong>0.9654 ROC-AUC</strong> — accurately identifying drug candidates that inhibit BACE-1 before amyloid plaques form.
               </p>
             </div>
           </motion.div>
@@ -231,7 +231,7 @@ export default function LandingPage({ onExplore }) {
          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeInUp}>
             <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
               <h2 style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.5rem' }}>🌍 GLOBAL IMPACT</h2>
-              <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>World Benchmark Achieved in Hybrid Subatomic Prediction</p>
+              <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>World Benchmark Achieved in Classical ML BACE-1 Prediction</p>
             </div>
 
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '30px', padding: '4rem', display: 'flex', flexWrap: 'wrap', gap: '4rem', alignItems: 'center', justifyContent: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.05)' }}>
@@ -241,22 +241,22 @@ export default function LandingPage({ onExplore }) {
                   <Award size={64} color="#fff" />
                 </div>
                 <h3 style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>WORLD BENCHMARK BADGE</h3>
-                <p style={{ color: 'var(--cyan)', fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.5rem' }}>"Highest Accuracy in BACE-1 Prediction"</p>
-                <p style={{ color: 'var(--text-muted)' }}>Industry-Leading 84.2% Hybrid Model Accuracy</p>
+                <p style={{ color: 'var(--cyan)', fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.5rem' }}>"High Accuracy in BACE-1 Prediction"</p>
+                <p style={{ color: 'var(--text-muted)' }}>Industry-Leading 93.4% Ensemble Model Accuracy</p>
               </div>
 
               <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', flex: '2 1 500px' }}>
                  <div style={{ flex: '1 1 200px', padding: '2rem', border: '1px solid var(--border)', borderRadius: '20px', background: 'var(--bg-body)' }} ref={accRef}>
                     <span style={{ display: 'block', fontSize: '2.5rem', fontWeight: 800, color: 'var(--cyan)', marginBottom: '0.5rem' }}>{Math.floor(accCount)}%</span>
-                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Hybrid Accuracy</span>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Ensemble Accuracy</span>
                  </div>
                  <div style={{ flex: '1 1 200px', padding: '2rem', border: '1px solid var(--border)', borderRadius: '20px', background: 'var(--bg-body)' }} ref={aucRef}>
                     <span style={{ display: 'block', fontSize: '2.5rem', fontWeight: 800, color: 'var(--purple)', marginBottom: '0.5rem' }}>{aucCount.toFixed(4)}</span>
                     <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>ROC-AUC Score</span>
                  </div>
-                 <div style={{ flex: '1 1 200px', padding: '2rem', border: '1px solid var(--border)', borderRadius: '20px', background: 'var(--bg-body)' }} ref={qubitRef}>
-                    <span style={{ display: 'block', fontSize: '2.5rem', fontWeight: 800, color: 'var(--green)', marginBottom: '0.5rem' }}>{Math.floor(qubitCount)}</span>
-                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Entangled Qubits</span>
+                 <div style={{ flex: '1 1 200px', padding: '2rem', border: '1px solid var(--border)', borderRadius: '20px', background: 'var(--bg-body)' }} ref={treeRef}>
+                    <span style={{ display: 'block', fontSize: '2.5rem', fontWeight: 800, color: 'var(--green)', marginBottom: '0.5rem' }}>{Math.floor(treeCount)}</span>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Ensemble Trees</span>
                  </div>
                  <div style={{ flex: '1 1 200px', padding: '2rem', border: '1px solid var(--border)', borderRadius: '20px', background: 'var(--bg-body)' }} ref={molRef}>
                     <span style={{ display: 'block', fontSize: '2.5rem', fontWeight: 800, color: 'var(--amber)', marginBottom: '0.5rem' }}>{Math.floor(molCount).toLocaleString()}</span>

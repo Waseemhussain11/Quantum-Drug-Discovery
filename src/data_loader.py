@@ -1,7 +1,11 @@
-import deepchem as dc
 import numpy as np
 import os
 from sklearn.model_selection import train_test_split
+
+try:
+    import deepchem as dc
+except ImportError:
+    dc = None
 
 def load_bace_data(use_expanded=True):
     """
@@ -26,8 +30,13 @@ def load_bace_data(use_expanded=True):
         
         print(f"✅ Expanded dataset loaded from {expanded_x_path}")
     else:
+        if dc is None:
+            raise ImportError(
+                "Neither data/processed/X_expanded.npy nor DeepChem is available. "
+                "Please ensure data/processed/ has dataset files or install deepchem."
+            )
         print("=" * 50)
-        print("Loading standard MoleculeNet BACE Dataset...")
+        print("Loading standard MoleculeNet BACE Dataset via DeepChem...")
         print("=" * 50)
 
         tasks, datasets, transformers = dc.molnet.load_bace_classification(

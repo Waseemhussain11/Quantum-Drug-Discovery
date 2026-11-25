@@ -1,127 +1,159 @@
-# 🔬 Quantum Precision: Hybrid Drug Discovery
+# 🧠 Alzheimer’s Disease Diagnosis and Drug Discovery Using Artificial Intelligence
 
-A state-of-the-art drug discovery platform that leverages **Hybrid Quantum-Classical Machine Learning** to predict the inhibition of BACE-1 (Beta-secretase 1), a critical enzyme implicated in Alzheimer's disease.
+An end-to-end, dual-module artificial intelligence platform designed for **Alzheimer’s Disease (AD) Brain MRI Staging** and **Classical Machine Learning-driven BACE-1 Drug Discovery**.
 
-## 🌌 Core Principles &  Ideas
-
-### 1. The Subatomic Observer
-The project follows a unique design philosophy called **"The Subatomic Observer."** It treats the user interface as a high-precision optical instrument—layered with depth, utilizing glassmorphism, and pulsating with the energy of molecular simulation. This ensures that complex quantum data feels tangible and intuitive.
-
-### 2. Hybrid Quantum-Classical Synergy
-We combine the best of both worlds:
-*   **Classical XGBoost**: Provides a high-performance baseline using 1024-bit Morgan Fingerprints, excels at processing large datasets.
-*   **Quantum SVM**: Utilizes a `ZZFeatureMap` to map data into higher-dimensional quantum feature spaces for a subset of molecules, potentially capturing patterns invisible to classical kernels.
-*   **Weighted Consensus**: The final prediction is a 60/40 weighted fusion of classical and quantum probabilities, maximizing ROC-AUC performance.
+> [!WARNING]
+> **ACADEMIC RESEARCH PROTOTYPE — NOT CLINICALLY VALIDATED**  
+> This system is an academic research demonstration for computer-aided diagnosis and in-silico screening. It is **NOT** approved, regulated, or certified for clinical diagnostic use, treatment planning, or clinical decision support. Always consult certified neurologists and medical imaging specialists.
 
 ---
 
-## 🛠️ Tech Stack & Purpose
+## 🏛️ System Architecture
 
-*   **Qiskit**: Powers the quantum circuit simulations and provides the `FidelityQuantumKernel` for the SVM.
-*   **XGBoost**: Handles the high-speed classical gradient boosting used for both baseline and hybrid predictions.
-*   **DeepChem & RDKit**: Essential for chemical informatics—used for featurization (ECFP), SMILES canonicalization, and Lipinski rule validation.
-*   **FastAPI**: A high-performance Python backend providing RESTful endpoints for real-time model inference and molecular property lookups.
-*   **Streamlit**: An interactive scientific dashboard for quick data exploration and model benchmarking.
-*   **React & Vite**: A modern frontend architecture designed for speed and a premium user experience.
-*   **Framer Motion**: Enables smooth micro-animations and "Subatomic" transitions across the UI.
-*   **Plotly.js**: Renders interactive 3D visualizations of molecular feature spaces and importance metrics.
-*   **Scikit-learn**: Handles data preprocessing, PCA for quantum dimensionality reduction, and model evaluation metrics.
+The application is structured into **two fully independent backend microservices** and **one unified React frontend**:
 
----
-
-## 📁 Project Structure
-
-
-quantum-drug-discovery/
-├── app/                    # Backend API & Streamlit Dashboard
-│   ├── api.py              # FastAPI Backend
-│   └── streamlit_app.py    # Scientific Dashboard
-├── frontend/               # React / Vite Premium UI
-├── models/                 # Pre-trained ML & Quantum models (.pkl)
-├── src/                    # Core Logic & Algorithms
-│   ├── classical_model.py  # XGBoost/RF Training
-│   ├── quantum_model.py    # Quantum SVM Training
-│   ├── hybrid_model.py     # Hybrid Prediction Engine
-│   ├── data_loader.py      # BACE Dataset Management
-│   └── features.py         # Molecule Featurization
-└── requirements.txt        # Python Dependencies
+```
++-------------------------------------------------------------------------+
+|                  UNIFIED REACT / VITE FRONTEND (PORT 5173)              |
+|              Interactive Dashboard, MRI Staging, Grad-CAM Visualizer     |
++------------------------------------+------------------------------------+
+                                     |
+           +-------------------------+-------------------------+
+           |                                                   |
+           v                                                   v
++--------------------------------------+   +--------------------------------------+
+|     DRUG DISCOVERY MICROSERVICE      |   |        DIAGNOSIS MICROSERVICE        |
+|             (Port 8000)              |   |             (Port 8001)              |
+|  • Classical ML Ensemble             |   |  • Deep Separable-CNN (Keras 3)      |
+|  • XGBoost (200 trees) + RF (200)    |   |  • 4-Class MRI Staging               |
+|  • 1024-bit Morgan Fingerprints      |   |  • Grad-CAM Visual Explainability    |
+|  • BACE-1 Alzheimer's Target         |   |  • Receptive Field Activation Maps   |
++--------------------------------------+   +--------------------------------------+
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🔬 Core Capabilities
 
-### 1. Prerequisites
-*   Python 3.10+
-*   Node.js 18+
-*   [RDKit](https://rdkit.org/docs/Install.html) (Included in requirements)
+### 1. Alzheimer's Disease MRI Diagnosis (`diagnosis_service/`)
+- **Model:** Deep Separable Convolutional Neural Network (`model.h5`, ~42.1 MB)
+- **Input Dimensions:** `176 × 176 × 3` RGB
+- **Classes (4-Class Multiclass):**
+  1. `Non Demented` (Healthy Control)
+  2. `Very Mild Demented` (Earliest subtle changes)
+  3. `Mild Demented` (Mild impairment)
+  4. `Moderate Demented` (Substantial cortical volume loss)
+- **Explainability:** Authentic **Grad-CAM** generated dynamically on the final separable convolutional block (`separable_conv2d_17`) using `tf.GradientTape`.
+- **Validation:** Upload size checks (max 5 MB), extension checks (`.jpg`, `.jpeg`, `.png`), and PIL corruption verification.
 
-### 2. Installation
-```bash
-# Clone the repository
-git clone https://github.com/your-repo/quantum-drug-discovery.git
-cd quantum-drug-discovery
+### 2. Classical AI Drug Discovery (`src/` & `app/`)
+- **Target:** BACE-1 (Beta-secretase 1), a critical rate-limiting enzyme in amyloid-beta production.
+- **Featurization:** 1024-bit Morgan circular fingerprints (radius = 2) via **RDKit**.
+- **Model Pipeline:** High-performance classical ensemble:
+  - **XGBoost Classifier:** 200 trees, 93.1% test accuracy, 0.9724 ROC-AUC.
+  - **Random Forest Classifier:** 200 trees, 91.1% test accuracy, 0.9585 ROC-AUC.
+  - **Weighted Consensus:** 55% XGBoost + 45% Random Forest (93.4% accuracy, 0.9654 ROC-AUC).
+- **Features:** Real-time Lipinski Rule-of-Five compliance, molecular properties (MW, LogP, TPSA, HBD, HBA), canonical SMILES resolution.
 
-# Set up Python Environment
+---
+
+## 📁 Repository Structure
+
+```
+Quantum-Drug-Discovery/
+├── app/
+│   ├── api.py                    # Classical Drug Discovery FastAPI (Port 8000)
+│   └── streamlit_app.py          # Classical Streamlit Discovery Lab
+├── diagnosis_service/
+│   ├── app.py                    # MRI Diagnosis FastAPI Microservice (Port 8001)
+│   ├── MODEL_FACTS.md            # Model specifications, dataset, and metrics
+│   ├── requirements.txt          # TensorFlow, Pillow, FastAPI dependencies
+│   ├── test_sync.py              # Unit & Logic tests for Diagnosis service
+│   ├── LICENSE                   # MIT License (IBM07 reference attribution)
+│   └── models/
+│       └── model.h5              # Trained Keras CNN weights (42.1 MB)
+├── data/
+│   └── processed/                # Pre-featurized BACE1 arrays (1513 molecules)
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx               # Unified navigation & view controller
+│   │   ├── components/
+│   │   │   ├── DiagnosisView.jsx # Alzheimer's MRI Staging & Grad-CAM UI
+│   │   │   ├── ResultsTab.jsx    # Drug Screening consensus results
+│   │   │   ├── QuantumTab.jsx    # Dual-tree ensemble architecture tab
+│   │   │   ├── SimulationView.jsx# 4-stage featurization & bagging view
+│   │   │   └── ...
+│   ├── package.json
+│   └── vite.config.js
+├── models/
+│   ├── classical_model.pkl       # Trained XGBoost BACE1 classifier
+│   └── rf_model.pkl              # Trained Random Forest BACE1 classifier
+├── src/
+│   ├── classical_model.py        # Model training routines
+│   ├── data_loader.py            # Dataset loading and fallback management
+│   ├── features.py               # Morgan fingerprinting routines
+│   └── hybrid_model.py           # Classical ensemble consensus engine
+├── requirements.txt              # Root classical Python dependencies
+├── test_install.py               # Verification test for classical pipeline
+├── TEST_REPORT.md                # Full test results & verification audit
+└── README.md
+```
+
+---
+
+## ⚡ Setup & Run Instructions (Windows PowerShell)
+
+### Step 1: Clone & Setup Drug Discovery Backend (Port 8000)
+```powershell
+# Open terminal in project root
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-# Set up Frontend
+# Run installation verification
+python test_install.py
+
+# Launch Drug Discovery API on Port 8000
+python -m uvicorn app.api:app --host 127.0.0.1 --port 8000 --reload
+```
+
+### Step 2: Setup Diagnosis Backend Microservice (Port 8001)
+```powershell
+# Open a second PowerShell terminal in project root
+python -m venv .venv_diag
+.\.venv_diag\Scripts\Activate.ps1
+pip install --target "\\?\C:\Users\anwb7\OneDrive\projects\Quantum Drug discovery\Quantum-Drug-Discovery\.venv_diag\Lib\site-packages" -r diagnosis_service\requirements.txt
+
+# Run diagnosis test suite
+python diagnosis_service\test_sync.py
+
+# Launch Diagnosis API on Port 8001
+python -m uvicorn diagnosis_service.app:app --host 127.0.0.1 --port 8001 --reload
+```
+
+### Step 3: Launch React Frontend (Port 5173)
+```powershell
+# Open a third PowerShell terminal in frontend directory
 cd frontend
 npm install
-```
-
----
-
-## 🏋️ Training the Models
-
-Models are trained on the **BACE MoleculeNet** dataset (1522 compounds).
-
-1.  **Train Classical Model**:
-    ```bash
-    python src/classical_model.py
-    ```
-    *Builds XGBoost and Random Forest baselines.*
-
-2.  **Train Quantum Model**:
-    ```bash
-    python src/quantum_model.py
-    ```
-    *Performs PCA & trains a Quantum SVM (Approx. 5-10 mins).*
-
-3.  **Benchmark Hybrid Model**:
-    ```bash
-    python src/hybrid_model.py
-    ```
-    *Verifies the performance of the integrated hybrid engine.*
-
----
-
-## 🏃 Running the Application
-
-### Backend API (Port 8000)
-```bash
-python app/api.py
-```
-
-### Streamlit Dashboard
-```bash
-streamlit run app/streamlit_app.py
-```
-
-### Premium UI Frontend
-```bash
-cd frontend
+npm run build
 npm run dev
 ```
-Navigate to `http://localhost:5173` to experience the Subatomic Observer.
 
 ---
 
-## 🧪 Verification Plan
-The platform has been validated against the BACE-1 benchmark, achieving:
-*   **Classical Accuracy**: ~82.2%
-*   **Quantum Accuracy**: ~74.0%
-*   **Hybrid Accuracy**: **~84.0%** (2%+ improvement over purely classical)
-...............>
+## 🌐 Endpoints & URLs
 
-    it's basically best for intial phase of drug discovery and use to save billions of money.
+| Service | Protocol / Port | URL | Primary Function |
+| :--- | :--- | :--- | :--- |
+| **React Frontend** | HTTP / 5173 | `http://localhost:5173` | Unified Interactive Web Application |
+| **Drug Discovery API** | HTTP / 8000 | `http://127.0.0.1:8000/docs` | BACE1 SMILES Screening & Benchmarking |
+| **MRI Diagnosis API** | HTTP / 8001 | `http://127.0.0.1:8001/docs` | Multiclass MRI Staging & Grad-CAM Maps |
+
+---
+
+## 📜 Citations & Attributions
+
+- **MRI Model Source:** [IBM07/Multiclass_Classification_Alzheimer_Disease](https://github.com/IBM07/Multiclass_Classification_Alzheimer_Disease) (MIT License, Copyright © 2025 Mohammed Ibrahim Aejaz).
+- **Dataset:** Marco Pinamonti, *Alzheimer MRI 4 Classes Dataset*, Kaggle.
+- **Drug Discovery:** MoleculeNet BACE benchmark dataset, RDKit Cheminformatics.

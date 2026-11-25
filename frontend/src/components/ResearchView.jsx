@@ -24,7 +24,7 @@ const ResearchView = () => {
         </h1>
         
         <p className="research-subtitle">
-          Our scientists are currently synthesizing advanced quantum-hybrid models for protein folding and multi-target drug design. The research portal will provide direct access to our 10PB molecular database.
+          Our scientists are currently training advanced classical ensemble models for protein binding affinity and multi-target drug design. The research portal will provide direct access to our 10PB molecular database.
         </p>
         
         <div className="modules-grid">

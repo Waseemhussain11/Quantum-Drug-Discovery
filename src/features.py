@@ -1,9 +1,10 @@
+import os
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import Draw, AllChem
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
-import matplotlib.pyplot as plt
+
 
 
 def smiles_to_fingerprint(smiles, n_bits=1024):
@@ -65,12 +66,13 @@ def reduce_features_pca(X_train, X_test, n_components=8):
     return X_train_reduced, X_test_reduced, pca
 
 
-def scale_for_quantum(X_train_reduced, X_test_reduced):
-   
+def scale_features(X_train_reduced, X_test_reduced, feature_range=(0, 1)):
+    """
+    Standard MinMax feature scaling for classical ML visualization and modeling.
+    """
+    print(f"\nScaling features to range {feature_range}...")
 
-    print(f"\nScaling features for quantum circuit...")
-
-    scaler = MinMaxScaler(feature_range=(0, np.pi))
+    scaler = MinMaxScaler(feature_range=feature_range)
     X_train_scaled = scaler.fit_transform(X_train_reduced)
     X_test_scaled  = scaler.transform(X_test_reduced)
 
@@ -99,6 +101,7 @@ if __name__ == "__main__":
     print("\n📌 Test 2: SMILES → Image")
     img = smiles_to_image(smiles)
     if img:
+        os.makedirs("report", exist_ok=True)
         img.save("report/aspirin.png")
         print(f"   ✅ Image saved to report/aspirin.png")
 
@@ -108,8 +111,8 @@ if __name__ == "__main__":
     X_train, X_test, y_train, y_test = load_bace_data()
     X_train_r, X_test_r, pca = reduce_features_pca(X_train, X_test)
 
-    # Test 4: Quantum Scaling
-    print("\n📌 Test 4: Quantum Scaling")
-    X_train_s, X_test_s, scaler = scale_for_quantum(X_train_r, X_test_r)
+    # Test 4: Classical Feature Scaling
+    print("\n📌 Test 4: Feature Scaling")
+    X_train_s, X_test_s, scaler = scale_features(X_train_r, X_test_r)
 
     print("\n🎉 features.py working perfectly!")

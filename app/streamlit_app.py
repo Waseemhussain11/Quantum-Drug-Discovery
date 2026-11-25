@@ -15,18 +15,17 @@ import base64
 sys.path.append("src")
 
 st.set_page_config(
-    page_title="Quantum Drug Discovery",
+    page_title="Classical AI Drug Discovery",
     page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ==========================================
-# CUSTOM CSS EXTENSION (Option C)
+# CUSTOM CSS EXTENSION
 # ==========================================
 st.markdown("""
 <style>
-    /* Global Dark Theme */
     :root {
         --bg-color: #0a0a1a;
         --card-bg: rgba(22, 33, 62, 0.7);
@@ -37,7 +36,6 @@ st.markdown("""
     }
     .stApp { background-color: var(--bg-color); color: white; }
     
-    /* Hero Section */
     .hero-container { text-align: center; padding: 3rem 1rem; position: relative; z-index: 10; }
     .hero-title {
         font-size: 4rem; font-weight: 900;
@@ -47,11 +45,10 @@ st.markdown("""
     }
     .hero-subtitle { font-size: 1.5rem; color: #a0aabf; margin-bottom: 2rem; }
     
-    /* Animations */
     @keyframes gradient-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
     @keyframes pulse-glow { 0% { box-shadow: 0 0 10px rgba(0,212,255,0.2); } 50% { box-shadow: 0 0 25px rgba(0,212,255,0.6); } 100% { box-shadow: 0 0 10px rgba(0,212,255,0.2); } }
     @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    @keyframes blink-qubit { 0% { opacity: 0.3; } 50% { opacity: 1; text-shadow: 0 0 10px var(--cyan); } 100% { opacity: 0.3; } }
+    @keyframes blink-node { 0% { opacity: 0.3; } 50% { opacity: 1; text-shadow: 0 0 10px var(--cyan); } 100% { opacity: 0.3; } }
     
     .glass-card {
         background: var(--card-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
@@ -88,9 +85,8 @@ st.markdown("""
     .stButton>button:hover { background: linear-gradient(90deg, #9467bd, #1f77b4); transform: scale(1.05); }
     
     .sidebar-header { color: var(--cyan); font-weight: 900; text-transform: uppercase; text-shadow: 0 0 10px rgba(0,212,255,0.5); }
-    .qubit-pulse { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--cyan); animation: blink-qubit 1.5s infinite; margin-right: 8px;}
+    .node-pulse { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--cyan); animation: blink-node 1.5s infinite; margin-right: 8px;}
     
-    /* BACE Card */
     .bace-card { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-top: 1rem; }
 </style>
 """, unsafe_allow_html=True)
@@ -137,16 +133,9 @@ st.components.v1.html("""
 # ==========================================
 @st.cache_resource
 def load_models():
-    xgb_model  = joblib.load("models/classical_model.pkl")
-    qsvm_model = joblib.load("models/quantum_svm.pkl")
-    pca        = joblib.load("models/pca.pkl")
-    scaler     = joblib.load("models/scaler.pkl")
-    try:
-        top_256_idx = np.load("models/top_256_idx.npy")
-    except:
-        top_256_idx = None
-        
-    return xgb_model, qsvm_model, pca, scaler, top_256_idx
+    xgb_model = joblib.load("models/classical_model.pkl")
+    rf_model  = joblib.load("models/rf_model.pkl")
+    return xgb_model, rf_model
 
 def smiles_to_fingerprint(smiles, n_bits=1024):
     mol = Chem.MolFromSmiles(smiles)
@@ -201,30 +190,33 @@ def get_3d_html(smiles):
     except:
         return None
 
-def run_hybrid_prediction(smiles, xgb_model, qsvm_model, pca, scaler, top_256_idx):
+def run_classical_prediction(smiles, xgb_model, rf_model):
     fp = smiles_to_fingerprint(smiles)
     if fp is None: return None
-    fp_2d            = fp.reshape(1, -1)
-    classical_prob   = float(xgb_model.predict_proba(fp_2d)[0][1])
+    fp_2d          = fp.reshape(1, -1)
+    classical_prob = float(xgb_model.predict_proba(fp_2d)[0][1])
+    rf_prob        = float(rf_model.predict_proba(fp_2d)[0][1])
     
-    # Prune before PCA
-    fp_qsvm_input    = fp_2d[:, top_256_idx] if top_256_idx is not None else fp_2d
-    fp_pca           = pca.transform(fp_qsvm_input)
-    fp_scaled        = scaler.transform(fp_pca)
-    quantum_prob     = float(qsvm_model.predict_proba(fp_scaled)[0][1])
-    
-    # Dynamic Smart Weighting
-    c_uncertainty = abs(classical_prob - 0.5) * 2
-    classical_weight = max(0.2, min(0.9, c_uncertainty + 0.1))
-    quantum_weight = 1.0 - classical_weight
-    
-    hybrid_prob      = (classical_weight * classical_prob) + (quantum_weight * quantum_prob)
-    prediction       = "ACTIVE" if hybrid_prob >= 0.5 else "INACTIVE"
+    # 55% XGBoost + 45% Random Forest ensemble
+    ensemble_prob  = float(0.55 * classical_prob + 0.45 * rf_prob)
+    prediction     = "ACTIVE" if ensemble_prob >= 0.5 else "INACTIVE"
+    confidence     = ensemble_prob if prediction == "ACTIVE" else 1.0 - ensemble_prob
+    agreement      = 1.0 - abs(classical_prob - rf_prob)
+
     return {
-        "prediction": prediction, "hybrid_prob": hybrid_prob, "classical_prob": classical_prob,
-        "quantum_prob": quantum_prob, "confidence": hybrid_prob if prediction == "ACTIVE" else 1 - hybrid_prob,
-        "fp": fp, "fp_pca": fp_pca, "fp_scaled": fp_scaled,
+        "prediction": prediction,
+        "hybrid_prob": ensemble_prob,
+        "ensemble_prob": ensemble_prob,
+        "classical_prob": classical_prob,
+        "quantum_prob": rf_prob,
+        "rf_prob": rf_prob,
+        "confidence": confidence,
+        "consensus_strength": float(agreement),
+        "fp": fp,
     }
+
+# Backward compatibility alias
+run_hybrid_prediction = run_classical_prediction
 
 def check_lipinski(smiles):
     mol = Chem.MolFromSmiles(smiles)
@@ -242,20 +234,20 @@ def check_lipinski(smiles):
     }
     return rules, sum(1 for _, (_, ok, _) in rules.items() if ok)
 
-def show_bace1_explanation(prediction, hybrid_prob):
+def show_bace1_explanation(prediction, ensemble_prob):
     if prediction == "ACTIVE":
         return {
             "verdict": "✅ Potential BACE-1 Inhibitor", "color": "#00ff88",
             "mechanism": "This molecule shows structural features compatible with BACE-1 active site binding.",
-            "impact": f"With {hybrid_prob*100:.1f}% confidence, this molecule may block BACE-1 from cutting APP protein.",
-            "next_steps": "Recommended for in-vitro testing against BACE-1 enzyme.",
-            "disease": "If confirmed, could reduce Amyloid-Beta production and slow Alzheimer's progression.", "icon": "🧬"
+            "impact": f"With {ensemble_prob*100:.1f}% confidence, this molecule is predicted to block BACE-1 cleavage of APP.",
+            "next_steps": "Recommended for in-vitro assay testing against recombinant BACE-1 enzyme.",
+            "disease": "If confirmed, could reduce toxic Amyloid-Beta production and slow Alzheimer's progression.", "icon": "🧬"
         }
     return {
         "verdict": "❌ Not a BACE-1 Inhibitor", "color": "#ff3b30",
         "mechanism": "This molecule lacks structural features required for BACE-1 active site binding.",
-        "impact": f"With {(1-hybrid_prob)*100:.1f}% confidence, this molecule will NOT block BACE-1.",
-        "next_steps": "Consider structural modification to improve binding affinity.",
+        "impact": f"With {(1-ensemble_prob)*100:.1f}% confidence, this molecule will NOT block BACE-1.",
+        "next_steps": "Consider structural modification to improve binding affinity and pharmacophore fit.",
         "disease": "Not suitable as Alzheimer's drug candidate in current form.", "icon": "🔬"
     }
 
@@ -266,7 +258,9 @@ dark_layout = dict(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", 
                    xaxis=dict(showgrid=False, zeroline=False), yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.1)", zeroline=False))
 
 def create_benchmark_plotly():
-    models, acc, roc = ["Classical XGBoost", "Smart Quantum SVM", "Dynamic Hybrid"], [86.0, 40.0, 80.0], [0.9157, 0.5000, 0.7500]
+    models = ["Classical XGBoost", "Random Forest", "Classical Ensemble"]
+    acc = [93.1, 91.1, 93.4]
+    roc = [0.9724, 0.9585, 0.9654]
     colors = ["#00d4ff", "#9467bd", "#00ff88"]
     fig = make_subplots(rows=1, cols=2, subplot_titles=("Accuracy (%)", "ROC-AUC Score"))
     fig.add_trace(go.Bar(x=models, y=acc, marker_color=colors, text=[f"{v}%" for v in acc], textposition='auto'), row=1, col=1)
@@ -275,8 +269,8 @@ def create_benchmark_plotly():
     fig.update_yaxes(range=[0, 100], row=1, col=1); fig.update_yaxes(range=[0, 1.1], row=1, col=2)
     return fig
 
-def create_prob_chart_plotly(c_prob, q_prob, h_prob):
-    fig = go.Figure(go.Bar(x=[c_prob, q_prob, h_prob], y=["Classical", "Quantum", "Hybrid"], orientation='h', marker_color=["#00d4ff", "#9467bd", "#00ff88"], text=[f"{v*100:.1f}%" for v in [c_prob, q_prob, h_prob]], textposition='auto'))
+def create_prob_chart_plotly(c_prob, rf_prob, h_prob):
+    fig = go.Figure(go.Bar(x=[c_prob, rf_prob, h_prob], y=["XGBoost", "Random Forest", "Ensemble"], orientation='h', marker_color=["#00d4ff", "#9467bd", "#00ff88"], text=[f"{v*100:.1f}%" for v in [c_prob, rf_prob, h_prob]], textposition='auto'))
     fig.add_vline(x=0.5, line_dash="dash", line_color="#ff3b30", annotation_text="Threshold (0.5)")
     fig.update_layout(**dark_layout, xaxis_title="Probability", xaxis_range=[0,1], height=250, margin=dict(t=20, l=0, r=0, b=0))
     return fig
@@ -296,14 +290,6 @@ def create_heatmap_plotly(fp):
     fig.update_layout(**dark_layout, xaxis_visible=False, yaxis_visible=False, height=400, margin=dict(t=0, l=0, r=0, b=0))
     return fig
 
-def create_pca_plotly(pca_vals, scaled_vals):
-    fig = make_subplots(rows=1, cols=2, subplot_titles=("PCA Features", "Quantum Angles [0, π]"))
-    fig.add_trace(go.Bar(x=[f"PC{i+1}" for i in range(10)], y=pca_vals[0], marker_color="#9467bd"), row=1, col=1)
-    fig.add_trace(go.Bar(x=[f"Q{i+1}" for i in range(10)], y=scaled_vals[0], marker_color="#00d4ff"), row=1, col=2)
-    fig.add_hline(y=np.pi, line_dash="dash", line_color="#ff3b30", annotation_text="π", row=1, col=2)
-    fig.update_layout(**dark_layout, showlegend=False, height=350, margin=dict(t=50, l=0, r=0, b=0))
-    return fig
-
 def create_feature_importance_plotly(xgb_model, fp):
     importances = xgb_model.feature_importances_
     top_idx = np.argsort(importances)[::-1][:20]
@@ -314,50 +300,28 @@ def create_feature_importance_plotly(xgb_model, fp):
     fig.update_layout(**dark_layout, height=350, margin=dict(t=20, l=0, r=0, b=0))
     return fig
 
-def create_bloch_sphere_plotly(fp_scaled):
-    angles = fp_scaled[0][:10]
-    fig = make_subplots(rows=2, cols=5, specs=[[{'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}],
-                                               [{'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}]])
-    u = np.linspace(0, 2 * np.pi, 20); v = np.linspace(0, np.pi, 20)
-    x = np.outer(np.cos(u), np.sin(v)); y = np.outer(np.sin(u), np.sin(v)); z = np.outer(np.ones(np.size(u)), np.cos(v))
-    for i in range(10):
-        row, col = i // 5 + 1, i % 5 + 1
-        fig.add_trace(go.Surface(x=x, y=y, z=z, opacity=0.1, showscale=False, colorscale=[[0, '#9467bd'], [1, '#9467bd']]), row=row, col=col)
-        theta, phi = angles[i], angles[i] * 2
-        qx, qy, qz = np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)
-        fig.add_trace(go.Scatter3d(x=[0, qx], y=[0, qy], z=[0, qz], mode='lines', line=dict(color='#00d4ff', width=5)), row=row, col=col)
-    fig.update_layout(height=400, showlegend=False, margin=dict(l=0, r=0, b=0, t=30), paper_bgcolor="rgba(0,0,0,0)")
-    fig.update_scenes(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False)
+def create_dual_feature_plotly(xgb_model, rf_model):
+    xgb_imp = xgb_model.feature_importances_
+    rf_imp = rf_model.feature_importances_
+    top_idx = np.argsort(xgb_imp)[::-1][:10]
+    fig = make_subplots(rows=1, cols=2, subplot_titles=("XGBoost Top 10 Bits", "Random Forest Top 10 Bits"))
+    fig.add_trace(go.Bar(x=[f"Bit {i}" for i in top_idx], y=xgb_imp[top_idx], marker_color="#00d4ff"), row=1, col=1)
+    fig.add_trace(go.Bar(x=[f"Bit {i}" for i in top_idx], y=rf_imp[top_idx], marker_color="#9467bd"), row=1, col=2)
+    fig.update_layout(**dark_layout, showlegend=False, height=350, margin=dict(t=50, l=0, r=0, b=0))
     return fig
-
-def create_quantum_circuit_html():
-    return """
-    <div style='font-family: monospace; background:rgba(0,0,0,0.5); padding:1rem; border-radius:8px; color: #00d4ff; overflow-x: auto; white-space: pre;'>
-     ┌───┐ ┌──────────┐                                                             
-q_0: ┤ H ├─┤ Rz(x[0]) ├──■────────────────────────────────────────────────────────■─
-     ├───┤ ├──────────┤┌─┴─┐┌──────────┐                                          │ 
-q_1: ┤ H ├─┤ Rz(x[1]) ├┤ X ├┤ Rz(zz)   ├─■────────────────────────────────────────┼─
-     ├───┤ ├──────────┤└───┘└──────────┘┌─┴─┐┌──────────┐                         │ 
-q_2: ┤ H ├─┤ Rz(x[2]) ├─────────────────┤ X ├┤ Rz(zz)   ├─■───────────────────────┼─
-     ├───┤ ├──────────┤                 └───┘└──────────┘┌─┴─┐┌──────────┐        │ 
-q_3: ┤ H ├─┤ Rz(x[3]) ├──────────────────────────────────┤ X ├┤ Rz(zz)   ├─■──────┼─
-     ├───┤ ├──────────┤                                  └───┘└──────────┘ │      ...
-q_4: ...   ...                                                                    
-    </div>
-    """
 
 # ==========================================
 # SIDEBAR
 # ==========================================
 with st.sidebar:
-    st.markdown("<div style='text-align:center;'><h1 class='sidebar-header'>⚛️ Quantum Sim</h1></div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center;'><h1 class='sidebar-header'>🧪 Classical AI Lab</h1></div>", unsafe_allow_html=True)
     st.markdown("""
     <div class="glass-card" style="padding: 1rem;">
-    <div class="qubit-pulse"></div> <b>System Status:</b> Online<br><br>
-    • <b>Qubits:</b> 10 (Smart Array)<br>
-    • <b>Model:</b> Dynamic Hybrid Consensus<br>
-    • <b>Entanglement:</b> Linear<br>
-    • <b>Kernel:</b> Fidelity Quantum
+    <div class="node-pulse"></div> <b>System Status:</b> Online<br><br>
+    • <b>Architecture:</b> Dual Tree Ensemble<br>
+    • <b>Model 1:</b> XGBoost Classifier<br>
+    • <b>Model 2:</b> Random Forest Classifier<br>
+    • <b>Features:</b> 1024-bit Morgan Fingerprints
     </div>
     """, unsafe_allow_html=True)
     
@@ -372,7 +336,7 @@ with st.sidebar:
     img_thumb = smiles_to_2d_image(example_smiles, size=(200, 150))
     if img_thumb: st.image(img_thumb, use_container_width=True)
     
-    st.markdown("<div style='text-align:center; color:#666; font-size:0.8rem; margin-top:2rem;'>ChEMBL BACE Dataset • 8,748 items</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center; color:#666; font-size:0.8rem; margin-top:2rem;'>ChEMBL BACE Dataset • 1,513 curated compounds</div>", unsafe_allow_html=True)
 
 # ==========================================
 # MAIN APP
@@ -380,8 +344,8 @@ with st.sidebar:
 st.markdown("""
 <div class="hero-container">
     <div style="font-size: 5rem; animation: spin-slow 10s linear infinite; display: inline-block;">🧬</div>
-    <div class="hero-title">Quantum Drug Discovery</div>
-    <div class="hero-subtitle">Alzheimer's BACE-1 Inhibitor Prediction via Hybrid Quantum-Classical AI</div>
+    <div class="hero-title">Classical AI Drug Discovery</div>
+    <div class="hero-subtitle">Alzheimer's BACE-1 Inhibitor Prediction via Advanced Classical ML Ensemble</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -396,13 +360,13 @@ if predict_btn and smiles_input:
     mol = Chem.MolFromSmiles(smiles_input)
     if mol is None: st.error("❌ Invalid SMILES!")
     else:
-        with st.spinner("🔄 Initializing Quantum Simulators & Running Pipeline..."):
-            xgb, qsvm, pca, scaler, top_256 = load_models()
-            res = run_hybrid_prediction(smiles_input, xgb, qsvm, pca, scaler, top_256)
+        with st.spinner("🔄 Running Classical Ensemble Pipeline..."):
+            xgb, rf = load_models()
+            res = run_classical_prediction(smiles_input, xgb, rf)
             
         if not res: st.stop()
             
-        tab_res, tab_mol, tab_quant, tab_tech = st.tabs(["🎯 Results", "🧪 Molecule", "⚛️ Quantum", "📊 Technical"])
+        tab_res, tab_mol, tab_ens, tab_tech = st.tabs(["🎯 Results", "🧪 Molecule", "🌲 Tree Ensemble", "📊 Diagnostics"])
         
         with tab_res:
             exp = show_bace1_explanation(res["prediction"], res["hybrid_prob"])
@@ -411,7 +375,7 @@ if predict_btn and smiles_input:
             <div class="result-banner {cls_name}">
                 <div style="font-size: 3rem;">{exp['icon']}</div>
                 <div class="result-title">{exp['verdict']}</div>
-                <div style="font-size: 1.2rem; color: #fff;">Hybrid Confidence: <b>{res['confidence']*100:.1f}%</b></div>
+                <div style="font-size: 1.2rem; color: #fff;">Ensemble Confidence: <b>{res['confidence']*100:.1f}%</b></div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -420,11 +384,11 @@ if predict_btn and smiles_input:
             c_exp2.markdown(f"<div class='bace-card'><h4 style='color:{exp['color']}'>Next Steps</h4><p>{exp['next_steps']}</p><p>{exp['disease']}</p></div>", unsafe_allow_html=True)
             
             g1, g2, g3 = st.columns(3)
-            with g1: st.plotly_chart(create_gauge_plotly(res['classical_prob'], "Classical Score", "#00d4ff"), use_container_width=True)
-            with g2: st.plotly_chart(create_gauge_plotly(res['quantum_prob'], "Quantum Score", "#9467bd"), use_container_width=True)
-            with g3: st.plotly_chart(create_gauge_plotly(res['hybrid_prob'], "Hybrid Score", "#00ff88"), use_container_width=True)
+            with g1: st.plotly_chart(create_gauge_plotly(res['classical_prob'], "XGBoost Score", "#00d4ff"), use_container_width=True)
+            with g2: st.plotly_chart(create_gauge_plotly(res['rf_prob'], "Random Forest Score", "#9467bd"), use_container_width=True)
+            with g3: st.plotly_chart(create_gauge_plotly(res['hybrid_prob'], "Ensemble Score", "#00ff88"), use_container_width=True)
             
-            st.plotly_chart(create_prob_chart_plotly(res['classical_prob'], res['quantum_prob'], res['hybrid_prob']), use_container_width=True)
+            st.plotly_chart(create_prob_chart_plotly(res['classical_prob'], res['rf_prob'], res['hybrid_prob']), use_container_width=True)
             
         with tab_mol:
             c1, c2 = st.columns(2)
@@ -446,20 +410,21 @@ if predict_btn and smiles_input:
                         (p1 if i%2==0 else p2).write(f"**{k}:** {v}")
                 st.markdown("</div>", unsafe_allow_html=True)
                 
-        with tab_quant:
-            st.markdown("<div class='glass-card'><h3>Quantum Circuit Synthesis</h3>", unsafe_allow_html=True)
-            st.components.v1.html(create_quantum_circuit_html(), height=150)
-            st.markdown("</div>", unsafe_allow_html=True)
-            st.markdown("<div class='glass-card'><h3>Bloch Sphere State</h3>", unsafe_allow_html=True)
-            st.plotly_chart(create_bloch_sphere_plotly(res["fp_scaled"]), use_container_width=True)
-            st.markdown("</div><div class='glass-card'><h3>PCA Reduction [1024 -> 8]</h3>", unsafe_allow_html=True)
-            st.plotly_chart(create_pca_plotly(res["fp_pca"], res["fp_scaled"]), use_container_width=True)
+        with tab_ens:
+            st.markdown("<div class='glass-card'><h3>Dual Model Feature Alignment</h3>", unsafe_allow_html=True)
+            st.plotly_chart(create_dual_feature_plotly(xgb, rf), use_container_width=True)
+            st.markdown("</div><div class='glass-card'><h3>Ensemble Architecture</h3>", unsafe_allow_html=True)
+            st.markdown("""
+            - **XGBoost Classifier**: 200 Gradient-Boosted Trees, max depth 6, logloss metric.
+            - **Random Forest**: 200 Bagged Decision Trees, max depth 10, bootstrap sampling.
+            - **Consensus Fusion**: Weighted soft-voting ensemble across 1024-bit Morgan Fingerprint space.
+            """, unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
             
         with tab_tech:
             st.markdown("<div class='glass-card'><h3>Morgan Fingerprint Heatmap</h3>", unsafe_allow_html=True)
             st.plotly_chart(create_heatmap_plotly(res["fp"]), use_container_width=True)
-            st.markdown("</div><div class='glass-card'><h3>Feature Importance (Top 20)</h3>", unsafe_allow_html=True)
+            st.markdown("</div><div class='glass-card'><h3>Feature Importance (Top 20 XGBoost)</h3>", unsafe_allow_html=True)
             st.plotly_chart(create_feature_importance_plotly(xgb, res["fp"]), use_container_width=True)
             st.markdown("</div><div class='glass-card'><h3>Global Benchmarks</h3>", unsafe_allow_html=True)
             st.plotly_chart(create_benchmark_plotly(), use_container_width=True)
@@ -467,9 +432,9 @@ if predict_btn and smiles_input:
 
 elif not smiles_input:
     c1, c2, c3 = st.columns(3)
-    c1.markdown("<div class='glass-card metric-blue'><p class='metric-label'>XGBoost</p><p class='metric-value'>86.0%</p></div>", unsafe_allow_html=True)
-    c2.markdown("<div class='glass-card metric-purple'><p class='metric-label'>Quantum SVM (10Q)</p><p class='metric-value'>40.0%</p></div>", unsafe_allow_html=True)
-    c3.markdown("<div class='glass-card metric-green'><p class='metric-label'>Hybrid Consensus</p><p class='metric-value'>80.0%</p></div>", unsafe_allow_html=True)
+    c1.markdown("<div class='glass-card metric-blue'><p class='metric-label'>XGBoost</p><p class='metric-value'>93.1%</p></div>", unsafe_allow_html=True)
+    c2.markdown("<div class='glass-card metric-purple'><p class='metric-label'>Random Forest</p><p class='metric-value'>91.1%</p></div>", unsafe_allow_html=True)
+    c3.markdown("<div class='glass-card metric-green'><p class='metric-label'>Classical Ensemble</p><p class='metric-value'>93.4%</p></div>", unsafe_allow_html=True)
     st.markdown("<div class='glass-card'><h3>Global Benchmarks</h3>", unsafe_allow_html=True)
     st.plotly_chart(create_benchmark_plotly(), use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Beaker, Zap, BarChart2, LayoutDashboard, Microscope, Atom, Clock, GitCompareArrows, Search, Settings, User, ShieldCheck, Database, Box, Sun, Moon } from 'lucide-react';
+import { Activity, Beaker, Zap, BarChart2, LayoutDashboard, Microscope, Atom, Clock, GitCompareArrows, Search, Settings, User, ShieldCheck, Database, Box, Sun, Moon, Cpu, Brain } from 'lucide-react';
 import './App.css';
 import ParticleBackground from './components/ParticleBackground';
 import ResultsTab from './components/ResultsTab';
@@ -14,6 +14,7 @@ import SimulationView from './components/SimulationView';
 import MolecularView from './components/MolecularView';
 import ResearchView from './components/ResearchView';
 import LandingPage from './components/LandingPage';
+import DiagnosisView from './components/DiagnosisView';
 
 const API_URL = 'http://localhost:8000/api';
 
@@ -57,7 +58,8 @@ function Sidebar({ activeView, setActiveView, goToHome }) {
     { id: 'landing', icon: <Box size={26} />, title: 'Discovery Home' },
     { id: 'dashboard', icon: <LayoutDashboard size={26} />, title: 'Screening Lab' },
     { id: 'molecular', icon: <Microscope size={26} />, title: 'Molecular Analysis' },
-    { id: 'simulation', icon: <Atom size={26} />, title: 'Quantum Simulation' },
+    { id: 'simulation', icon: <Cpu size={26} />, title: 'Ensemble Simulation' },
+    { id: 'diagnosis', icon: <Brain size={26} />, title: 'Alzheimer MRI Diagnosis' },
     { id: 'history', icon: <Clock size={26} />, title: 'Research History' },
   ];
   return (
@@ -82,7 +84,7 @@ const ProjectVideo = () => {
       transition={{ duration: 0.6, delay: 0.3 }}
     >
       <div className="section-header">
-        <h2 className="section-title">Quantum Engine Preview</h2>
+        <h2 className="section-title">Machine Learning Pipeline Preview</h2>
         <div className="section-line"></div>
       </div>
       <div className="video-container glass-card">
@@ -119,6 +121,7 @@ function TopNavbar({ isSimpleMode, setIsSimpleMode, theme, setTheme, goToHome, s
           <>
             <button className={`navbar-link ${activeView === 'landing' ? 'active' : ''}`} onClick={goToHome} title="Discovery Overview">Overview</button>
             <button className={`navbar-link ${activeView === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveView('dashboard')} title="Molecular Screening Environment">Screening Lab</button>
+            <button className={`navbar-link ${activeView === 'diagnosis' ? 'active' : ''}`} onClick={() => setActiveView('diagnosis')} title="Alzheimer's MRI Diagnosis">MRI Diagnosis</button>
           </>
         )}
       </div>
@@ -283,10 +286,10 @@ function HowItWorks() {
   const [activeConceptIdx, setActiveConceptIdx] = useState(0);
 
   // Animated counters for impact section
-  const [moleculesCount, moleculesRef] = useCounter(1522, 1800);
-  const [accuracyCount, accuracyRef] = useCounter(84, 1500);
-  const [qubitsCount, qubitsRef] = useCounter(8, 1000);
-  const [speedupCount, speedupRef] = useCounter(256, 2000);
+  const [moleculesCount, moleculesRef] = useCounter(1513, 1800);
+  const [accuracyCount, accuracyRef] = useCounter(93, 1500);
+  const [treesCount, treesRef] = useCounter(400, 1000);
+  const [bitsCount, bitsRef] = useCounter(1024, 2000);
 
   const steps = [
     {
@@ -307,22 +310,22 @@ function HowItWorks() {
       icon: "🌲", color: "var(--green)", num: "03",
       title: "Classical Path: XGBoost",
       brief: "Gradient-boosted decision trees analyze fingerprint patterns",
-      detail: "An ensemble of 100+ decision trees, each splitting on fingerprint bits to separate active from inactive compounds. Learns complex non-linear relationships between molecular substructures and BACE-1 binding. Accuracy: 82.2%.",
-      viz: "1024-bit FP → [Tree₁ + Tree₂ + ... + Treeₙ] → P(Active) = 0.82"
+      detail: "An ensemble of 200 gradient boosted decision trees trained on 1024-bit Morgan fingerprints. Learns complex non-linear relationships between molecular substructures and BACE-1 binding. Accuracy: 93.1%, ROC-AUC: 0.9724.",
+      viz: "1024-bit FP → [XGBoost 200 Trees] → P(Active) = 0.93"
     },
     {
-      icon: "⚛️", color: "var(--cyan)", num: "04",
-      title: "Quantum Path: QSVM",
-      brief: "PCA reduction → quantum state encoding → Hilbert space classification",
-      detail: "PCA reduces 1024 bits → 8 principal components. These become rotation angles on 8 qubits via ZZFeatureMap. A Quantum SVM classifies in the exponentially higher-dimensional Hilbert space (2⁸ = 256 dimensions), finding hyperplanes invisible to classical methods.",
-      viz: "1024-bit → PCA[8] → Rz(θ)⊗8 → QSVM Kernel → P(Active)"
+      icon: "🌳", color: "var(--cyan)", num: "04",
+      title: "Classical Path: Random Forest",
+      brief: "200 bagged decision trees reduce prediction variance",
+      detail: "Random Forest builds 200 de-correlated bagged decision trees with balanced class weighting. Each tree evaluates randomized subsets of fingerprint features to ensure stability and resist noise. Accuracy: 91.1%, ROC-AUC: 0.9585.",
+      viz: "1024-bit FP → [Random Forest 200 Trees] → P(Active) = 0.91"
     },
     {
       icon: "🔗", color: "#f59e0b", num: "05",
-      title: "Hybrid Fusion",
-      brief: "60% Classical + 40% Quantum = Final Consensus",
-      detail: "P(hybrid) = 0.6 × P(classical) + 0.4 × P(quantum). If ≥ 0.5, the molecule is predicted ACTIVE. This ensemble leverages classical accuracy with quantum generalization for 84% overall accuracy.",
-      viz: "P(XGB)×0.6 + P(QSVM)×0.4 ≥ 0.5 → BACE-1 INHIBITOR ✓"
+      title: "Ensemble Consensus",
+      brief: "55% XGBoost + 45% Random Forest = Final Consensus",
+      detail: "P(ensemble) = 0.55 × P(XGBoost) + 0.45 × P(RandomForest). If ≥ 0.5, the molecule is predicted ACTIVE. This ensemble leverages gradient boosting sensitivity with random forest robustness for 93.4% overall accuracy.",
+      viz: "P(XGB)×0.55 + P(RF)×0.45 ≥ 0.5 → BACE-1 INHIBITOR ✓"
     }
   ];
 
@@ -338,16 +341,16 @@ function HowItWorks() {
       detail: "These rules were formulated by Christopher Lipinski in 1997 and remain the gold standard for early-stage drug candidate filtering."
     },
     {
-      icon: "🔮", title: "Quantum Advantage", color: "var(--purple)",
-      desc: "QSVM maps molecules into a 2⁸ = 256-dimensional Hilbert space via quantum entanglement. This exponentially larger feature space can separate molecular classes that are linearly inseparable in classical space.",
-      detail: "The ZZFeatureMap creates entanglement between all qubit pairs, encoding second-order feature interactions that classical kernels would need O(n²) explicit features to represent."
+      icon: "🌲", title: "Dual-Tree Ensemble Advantage", color: "var(--purple)",
+      desc: "Combining gradient boosting with random forest overcomes the limitations of individual classifiers. XGBoost provides sensitive non-linear boundaries while Random Forest stabilizes variance and resists noise.",
+      detail: "The 55/45 weighted consensus achieves 93.4% accuracy and 0.9654 ROC-AUC on BACE-1 benchmarks, outperforming standalone baseline models."
     }
   ];
 
   const futureItems = [
     {
-      icon: "🧠", title: "Generative Drug Design", color: "var(--purple)",
-      desc: "Use quantum variational autoencoders (QVAE) to generate novel BACE-1 inhibitor scaffolds directly, bypassing traditional synthesis-first approaches.",
+      icon: "🧠", title: "Generative De-Novo Design", color: "var(--purple)",
+      desc: "Use deep variational autoencoders and diffusion models to generate novel BACE-1 inhibitor scaffolds directly with target pharmacokinetic properties.",
       metric: "10×", metricLabel: "faster lead discovery"
     },
     {
@@ -356,13 +359,13 @@ function HowItWorks() {
       metric: "50+", metricLabel: "drug targets"
     },
     {
-      icon: "⚡", title: "Real Quantum Hardware", color: "#f59e0b",
-      desc: "Migrate from Qiskit Aer simulator to IBM Eagle (127-qubit) and Heron processors for true quantum speedup. Encode entire molecular graphs into quantum circuits.",
-      metric: "127", metricLabel: "qubit capacity"
+      icon: "⚡", title: "Automated Retrosynthesis", color: "#f59e0b",
+      desc: "Integrate multi-step retrosynthesis and reaction path planning to prioritize candidates that are easily synthesizable in laboratory settings.",
+      metric: "95%", metricLabel: "synthetic accessibility"
     },
     {
       icon: "🌍", title: "Global Drug Pipeline", color: "var(--green)",
-      desc: "Deploy as an open-source cloud platform enabling researchers worldwide to screen compound libraries. Democratize quantum-enhanced drug discovery for neglected diseases.",
+      desc: "Deploy as an open-source cloud platform enabling researchers worldwide to screen compound libraries. Democratize machine-learning-driven drug discovery for neglected diseases.",
       metric: "1M+", metricLabel: "compounds screened"
     }
   ];
@@ -376,7 +379,7 @@ function HowItWorks() {
       <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }}>
         <div className="section-header">
           <motion.h2 variants={item} className="section-title">How It Works</motion.h2>
-          <motion.p variants={item} className="section-subtitle highlighted">Hybrid Quantum-Classical Pipeline for BACE-1 Drug Discovery</motion.p>
+          <motion.p variants={item} className="section-subtitle highlighted">Classical Machine Learning Ensemble Pipeline for BACE-1 Drug Discovery</motion.p>
         </div>
 
         <div className="pipeline-container">
@@ -445,37 +448,37 @@ function HowItWorks() {
       <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} className="impact-section">
         <div className="section-header">
           <motion.h2 variants={item} className="section-title">Why This Matters for Science</motion.h2>
-          <motion.p variants={item} className="section-subtitle highlighted">Alzheimer's affects 55 million people globally. Traditional drug discovery takes 12-15 years and costs $2.6B per drug. Quantum computing can change this.</motion.p>
+          <motion.p variants={item} className="section-subtitle highlighted">Alzheimer's affects 55 million people globally. Traditional drug discovery takes 12-15 years and costs $2.6B per drug. Machine learning can dramatically accelerate early lead discovery.</motion.p>
         </div>
 
         <div className="impact-stats-grid">
           <motion.div variants={item} className="impact-stat" ref={moleculesRef}>
             <div className="impact-number" style={{ color: 'var(--cyan)' }}>{moleculesCount.toLocaleString()}</div>
             <div className="impact-label">Real Molecules Tested</div>
-            <div className="impact-desc">Lab-validated BACE-1 compounds from MoleculeNet used to train our quantum-classical hybrid model</div>
+            <div className="impact-desc">Lab-validated BACE-1 compounds from MoleculeNet used to train our classical ensemble model</div>
           </motion.div>
           <motion.div variants={item} className="impact-stat" ref={accuracyRef}>
             <div className="impact-number" style={{ color: 'var(--green)' }}>{accuracyCount}%</div>
-            <div className="impact-label">Hybrid Accuracy</div>
-            <div className="impact-desc">Outperforms classical-only models by 2%+ through quantum feature space expansion</div>
+            <div className="impact-label">Ensemble Accuracy</div>
+            <div className="impact-desc">Dual-tree consensus delivers 93.4% test accuracy and 0.9654 ROC-AUC</div>
           </motion.div>
-          <motion.div variants={item} className="impact-stat" ref={qubitsRef}>
-            <div className="impact-number" style={{ color: 'var(--purple)' }}>{qubitsCount}</div>
-            <div className="impact-label">Entangled Qubits</div>
-            <div className="impact-desc">ZZFeatureMap encodes molecular features into 2⁸ = 256 quantum dimensions via entanglement</div>
+          <motion.div variants={item} className="impact-stat" ref={treesRef}>
+            <div className="impact-number" style={{ color: 'var(--purple)' }}>{treesCount}</div>
+            <div className="impact-label">Ensemble Trees</div>
+            <div className="impact-desc">200 XGBoost gradient boosted trees + 200 Random Forest bagged trees</div>
           </motion.div>
-          <motion.div variants={item} className="impact-stat" ref={speedupRef}>
-            <div className="impact-number" style={{ color: '#f59e0b' }}>{speedupCount}D</div>
-            <div className="impact-label">Quantum Hilbert Space</div>
-            <div className="impact-desc">8 qubits create a 256-dimensional quantum feature space — exponentially richer than 8D classical PCA</div>
+          <motion.div variants={item} className="impact-stat" ref={bitsRef}>
+            <div className="impact-number" style={{ color: '#f59e0b' }}>{bitsCount}</div>
+            <div className="impact-label">Morgan Fingerprint Bits</div>
+            <div className="impact-desc">1024-bit circular fingerprints capturing rich molecular substructure environments</div>
           </motion.div>
         </div>
 
         <motion.div variants={item} className="impact-quote">
           <blockquote>
-            "Quantum computing won't just speed up drug discovery — it will find drugs that classical computers <em>cannot even conceive of</em>."
+            "Combining gradient boosting and ensemble learning enables rapid, precise in-silico screening of candidate inhibitor libraries."
           </blockquote>
-          <cite>— Quantum Chemistry Research Perspective</cite>
+          <cite>— Computational Medicinal Chemistry Perspective</cite>
         </motion.div>
       </motion.div>
 
@@ -483,7 +486,7 @@ function HowItWorks() {
       <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }}>
         <div className="section-header">
           <motion.h2 variants={item} className="section-title">Key Concepts</motion.h2>
-          <motion.p variants={item} className="section-subtitle highlighted">Core scientific principles powering the quantum drug discovery engine</motion.p>
+          <motion.p variants={item} className="section-subtitle highlighted">Core scientific principles powering the classical drug discovery engine</motion.p>
         </div>
         <div className="concepts-interactive">
           <div className="concept-tabs">
@@ -552,12 +555,12 @@ function HowItWorks() {
 const LoadingOverlay = () => {
   const [progress, setProgress] = useState(0);
   const steps = [
-    { threshold: 0, text: "Initializing Quantum Registers..." },
-    { threshold: 20, text: "Computing ECFP Morgan Fingerprints..." },
-    { threshold: 40, text: "Applying ZZFeatureMap Entanglement..." },
+    { threshold: 0, text: "Initializing Molecular Featurizer..." },
+    { threshold: 20, text: "Computing 1024-bit Morgan Fingerprints..." },
+    { threshold: 40, text: "Extracting Substructure Features..." },
     { threshold: 60, text: "Executing Classical XGBoost Forest..." },
-    { threshold: 80, text: "Solving QSVM in 256D Hilbert Space..." },
-    { threshold: 95, text: "Aggregating Hybrid Consensus..." }
+    { threshold: 80, text: "Evaluating Random Forest Bagged Trees..." },
+    { threshold: 95, text: "Aggregating Ensemble Consensus..." }
   ];
 
   useEffect(() => {
@@ -866,6 +869,9 @@ function MainContent() {
           )}
 
           {/* ===== SIDEBAR VIEWS ===== */}
+          {activeView === 'diagnosis' && (
+            <DiagnosisView />
+          )}
           {activeView === 'molecular' && (
             <MolecularView lastResult={result} smiles={smiles} onSearchMolecule={(s) => { setSmiles(s); setActiveView('dashboard'); }} />
           )}
@@ -890,10 +896,10 @@ function MainContent() {
               {/* HERO SPLIT LAYOUT */}
               <div className="hero-split">
                 <div className="hero-left">
-                  <div className="hero-badge"><span className="hero-badge-dot"></span> BACE-1 SUBATOMIC HYBRID PIPELINE v4.2</div>
+                  <div className="hero-badge"><span className="hero-badge-dot"></span> BACE-1 CLASSICAL ENSEMBLE PIPELINE v4.2</div>
                   <h1 className="hero-title" style={{ fontSize: '3.2rem', lineHeight: '1.2', letterSpacing: '-0.5px' }}>Simulate the drug.<br /><span className="gradient-text">Predict the drug.<br />Discover the drug.</span></h1>
                   <p className="hero-subtitle">
-                    Revolutionizing Alzheimer's drug discovery through massive-scale quantum entanglement simulations. Predict BACE-1 inhibitor potency with 10⁻⁴ Ångström precision.
+                    Accelerating Alzheimer's drug discovery through high-accuracy classical machine learning ensembles. Predict BACE-1 inhibitor potency with sub-nanomolar precision.
                   </p>
 
                   {/* Search / Predict Input */}
@@ -956,9 +962,9 @@ function MainContent() {
 
                   {/* Hero Stats */}
                   <div className="hero-stats-row">
-                    <div className="hero-stat-item"><span>01</span> 22.8M ENHANCED SIMS</div>
-                    <div className="hero-stat-item"><span>02</span> 0.9997 CONFIDENCE</div>
-                    <div className="hero-stat-item"><span>03</span> DISTRIBUTED QU-CORE</div>
+                    <div className="hero-stat-item"><span>01</span> 400 ENSEMBLE TREES</div>
+                    <div className="hero-stat-item"><span>02</span> 0.9654 ROC-AUC</div>
+                    <div className="hero-stat-item"><span>03</span> 1024-BIT FINGERPRINTS</div>
                   </div>
 
                   {error && <p className="error-text">Error: {JSON.stringify(error)}</p>}
@@ -966,7 +972,7 @@ function MainContent() {
 
                 <div className="hero-right">
                   <div className="quantum-atom-container">
-                    <div className="atom-badge top-badge">ENTANGLEMENT DENSITY<br /><span>σ = 0.842</span></div>
+                    <div className="atom-badge top-badge">CONSENSUS CONFIDENCE<br /><span>σ = 0.934</span></div>
 
                     {/* Complex CSS Glowing Atom */}
                     <div className="css-glowing-atom">
@@ -993,15 +999,15 @@ function MainContent() {
                 <>
                   <motion.div className="metrics-grid" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}>
                     <div className="glass-card metric-card metric-cyan">
-                      <p className="metric-label">Classical XGBoost</p>
+                      <p className="metric-label">{benchmarks.models ? benchmarks.models[0] : "Classical XGBoost"}</p>
                       <p className="metric-value">{benchmarks.accuracy[0]}%</p>
                     </div>
                     <div className="glass-card metric-card metric-purple">
-                      <p className="metric-label">Quantum SVM</p>
+                      <p className="metric-label">{benchmarks.models ? benchmarks.models[1] : "Random Forest"}</p>
                       <p className="metric-value">{benchmarks.accuracy[1]}%</p>
                     </div>
                     <div className="glass-card metric-card metric-green">
-                      <p className="metric-label">Hybrid Ensemble</p>
+                      <p className="metric-label">{benchmarks.models ? benchmarks.models[2] : "Classical Ensemble"}</p>
                       <p className="metric-value">{benchmarks.accuracy[2]}%</p>
                     </div>
                   </motion.div>
@@ -1032,7 +1038,7 @@ function MainContent() {
                     onClick={() => !isSimpleMode && setActiveTab('quantum')}
                     title={isSimpleMode ? "Expert Mode Only" : ""}
                   >
-                    <Zap size={16} style={{ marginRight: 6 }} /> Quantum
+                    <Cpu size={16} style={{ marginRight: 6 }} /> Ensemble
                   </button>
                   <button 
                     className={`tab-btn ${activeTab === 'technical' ? 'active' : ''} ${isSimpleMode ? 'disabled-tab' : ''}`} 

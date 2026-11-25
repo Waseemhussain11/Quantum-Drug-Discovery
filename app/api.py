@@ -16,7 +16,7 @@ sys.path.append("src")
 from dotenv import load_dotenv
 load_dotenv() # Load Groq API Key from .env file
 
-app = FastAPI(title="Quantum Drug Discovery API")
+app = FastAPI(title="Classical AI/ML Drug Discovery API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,19 +36,11 @@ cache_stats = {"hits": 0, "misses": 0}
 
 @app.on_event("startup")
 def load_all_models():
-    print("Loading models into memory...")
+    print("Loading classical models into memory...")
     try:
         MODELS["xgb"] = joblib.load("models/classical_model.pkl")
-        MODELS["qsvm"] = joblib.load("models/quantum_svm.pkl")
-        MODELS["pca"] = joblib.load("models/pca.pkl")
-        MODELS["scaler"] = joblib.load("models/scaler.pkl")
-        try:
-            MODELS["top_256_idx"] = np.load("models/top_256_idx.npy")
-            print("✅ 256-Feature Filter Mask loaded successfully!")
-        except Exception as e:
-            MODELS["top_256_idx"] = None
-            print("⚠️ 256-Feature Filter Mask not found. Falling back to 1024-bit direct.")
-        print("Models loaded successfully!")
+        MODELS["rf"] = joblib.load("models/rf_model.pkl")
+        print("Classical models (XGBoost & Random Forest) loaded successfully!")
     except Exception as e:
         print(f"Error loading models: {e}")
 
@@ -113,39 +105,23 @@ def predict_smiles(req: PredictRequest):
     fp_np = np.array(fp)
     fp_2d = fp_np.reshape(1, -1)
     
-    classical_prob = float(MODELS["xgb"].predict_proba(fp_2d)[0][1])
+    # Classical XGBoost prediction
+    xgb_prob = float(MODELS["xgb"].predict_proba(fp_2d)[0][1])
     
-    # Prune from 1024 down to Top 256 before compressing
-    if "top_256_idx" in MODELS and MODELS["top_256_idx"] is not None:
-        fp_qsvm_input = fp_2d[:, MODELS["top_256_idx"]]
-    else:
-        fp_qsvm_input = fp_2d
-        
-    fp_pca = MODELS["pca"].transform(fp_qsvm_input)
-    fp_scaled = MODELS["scaler"].transform(fp_pca)
+    # Classical Random Forest prediction
+    rf_prob = float(MODELS["rf"].predict_proba(fp_2d)[0][1])
     
-    quantum_prob = float(MODELS["qsvm"].predict_proba(fp_scaled)[0][1])
+    # Classical Weighted Ensemble: 55% XGBoost + 45% Random Forest
+    ensemble_prob = float(0.55 * xgb_prob + 0.45 * rf_prob)
+    prediction = "ACTIVE" if ensemble_prob >= 0.5 else "INACTIVE"
+    confidence = ensemble_prob if prediction == "ACTIVE" else 1.0 - ensemble_prob
     
-    # --- Dynamic Smart Hybrid Engine ---
-    # Calculate Classical Uncertainty (0 = perfectly uncertain, 1 = perfectly certain)
-    c_uncertainty = abs(classical_prob - 0.5) * 2
-    
-    # If classical is very certain, it keeps up to 90% vote.
-    # If classical is very uncertain, quantum gets up to 80% vote.
-    classical_weight = max(0.2, min(0.9, c_uncertainty + 0.1))
-    quantum_weight = 1.0 - classical_weight
-
-    hybrid_prob = (classical_weight * classical_prob) + (quantum_weight * quantum_prob)
-    prediction = "ACTIVE" if hybrid_prob >= 0.5 else "INACTIVE"
-    confidence = hybrid_prob if prediction == "ACTIVE" else 1 - hybrid_prob
-    
-    # Calculate Consensus Strength & Quantum Influence
-    # Strength: 1.0 if both models agree strongly, 0.0 if they disagree completely
-    agreement = 1.0 - abs(classical_prob - quantum_prob)
+    # Consensus Strength: Agreement between the classical models
+    agreement = 1.0 - abs(xgb_prob - rf_prob)
     consensus_strength = float(agreement)
     
-    # Quantum Influence: How much the quantum model changed the classical outcome
-    quantum_influence = float(hybrid_prob - classical_prob)
+    # Influence: RF delta relative to XGBoost baseline
+    rf_influence = float(ensemble_prob - xgb_prob)
     
     importances = MODELS["xgb"].feature_importances_
     top_idx = np.argsort(importances)[::-1][:20]
@@ -153,18 +129,25 @@ def predict_smiles(req: PredictRequest):
     mol_bits = fp_np[top_idx].tolist()
     feature_importance = [{"bit": int(idx), "importance": float(imp), "active": int(bit)} for idx, imp, bit in zip(top_idx, top_imp, mol_bits)]
     
+    # Generate top 8 classical feature importance scores for visualization compatibility
+    top_8_imp = [float(imp) for imp in importances[top_idx[:8]]]
+    top_8_angles = [float(imp * np.pi) for imp in top_8_imp]
+    
     lipinski, props = get_molecule_properties(smiles)
     
     result = {
         "prediction": prediction,
         "confidence": float(confidence),
-        "classical_prob": classical_prob,
-        "quantum_prob": quantum_prob,
-        "hybrid_prob": hybrid_prob,
+        "classical_prob": xgb_prob,
+        "rf_prob": rf_prob,
+        "quantum_prob": rf_prob,  # Preserved for backward-compatibility with UI gauge
+        "hybrid_prob": ensemble_prob,
+        "ensemble_prob": ensemble_prob,
         "consensus_strength": consensus_strength,
-        "quantum_influence": quantum_influence,
-        "pca_features": fp_pca[0].tolist(),
-        "quantum_angles": fp_scaled[0].tolist(),
+        "quantum_influence": rf_influence,  # Preserved for backward-compatibility with UI stat
+        "rf_influence": rf_influence,
+        "pca_features": top_8_imp,
+        "quantum_angles": top_8_angles,
         "fingerprint": fp_np.tolist(),
         "feature_importance": feature_importance,
         "lipinski": lipinski,
@@ -183,9 +166,9 @@ def predict_smiles(req: PredictRequest):
 @app.get("/api/benchmark")
 def get_benchmarks():
     return {
-        "models": ["Classical XGBoost", "Quantum SVM", "Hybrid"],
-        "accuracy": [82.2, 74.0, 84.0],
-        "roc_auc": [0.9225, 0.8487, 0.9400]
+        "models": ["Classical XGBoost", "Classical Random Forest", "Classical Ensemble"],
+        "accuracy": [93.1, 91.1, 93.4],
+        "roc_auc": [0.9724, 0.9585, 0.9654]
     }
 
 @app.get("/api/image/{smiles:path}")
@@ -221,7 +204,7 @@ async def resolve_molecule(request: Request):
             if res and len(res) > 0:
                 smiles = res[0].get('molecule_structures', {}).get('canonical_smiles')
                 if smiles:
-                    print(f"✅ Found {name} in ChEMBL Database: {smiles}")
+                    print(f"[OK] Found {name} in ChEMBL Database: {smiles}")
                     return {"smiles": smiles}
         except Exception as e:
             print(f"ChEMBL lookup failed, falling back to LLM: {e}")
@@ -251,7 +234,7 @@ async def resolve_molecule(request: Request):
             smiles = response.json()["choices"][0]["message"]["content"].strip()
             if smiles.lower() == "none" or len(smiles) < 2:
                 return {"smiles": None}
-            print(f"⚠️ Resolved {name} via AI LLM: {smiles}")
+            print(f"[INFO] Resolved {name} via AI LLM: {smiles}")
             return {"smiles": smiles}
             
         return {"smiles": None, "error": f"Groq API Error: {response.status_code}"}

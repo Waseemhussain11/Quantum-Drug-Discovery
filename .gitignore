@@ -15,3 +15,8 @@ build/
 .vscode/
 .idea/
 *.log
+_backup_quantum/
+
+
+.venv/
+.venv_diag/

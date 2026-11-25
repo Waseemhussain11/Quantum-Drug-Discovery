@@ -48,7 +48,7 @@ const ComparisonTab = ({ items, onRemove, isSimpleMode }) => {
       <div className="matrix-header">
         <h2 className="matrix-title">Molecular Comparison Matrix</h2>
         <p className="matrix-subtitle">
-          Benchmarking subatomic stability and BACE-1 inhibition potential across candidate series Q-24. High-fidelity quantum simulation data overlayed with classical pharmacokinetic metrics.
+          Benchmarking BACE-1 inhibition potential and pharmacokinetic profiles across candidate series. High-fidelity classical machine learning predictions overlayed with Lipinski drug-likeness metrics.
         </p>
       </div>
 
@@ -106,14 +106,14 @@ const ComparisonTab = ({ items, onRemove, isSimpleMode }) => {
               ))}
             </tr>
 
-            {/* Row 2: Classical Score */}
+            {/* Row 2: XGBoost Score */}
             <tr className="matrix-row">
               <td className="matrix-row-label">
                 <div className="row-label-content">
                   <Database className="row-icon" />
                   <div>
-                    <div className="row-title">{isSimpleMode ? "Standard AI Score" : "Classical Score"}</div>
-                    <div className="row-sub">{isSimpleMode ? "TRADITIONAL MACHINE LEARNING" : "EMPIRICAL FORCE FIELD"}</div>
+                    <div className="row-title">{isSimpleMode ? "XGBoost AI Score" : "XGBoost Score"}</div>
+                    <div className="row-sub">{isSimpleMode ? "GRADIENT BOOSTED TREES" : "RESIDUAL GRADIENT BOOSTING"}</div>
                   </div>
                 </div>
               </td>
@@ -127,54 +127,58 @@ const ComparisonTab = ({ items, onRemove, isSimpleMode }) => {
               ))}
             </tr>
 
-            {/* Row 3: Quantum Score */}
+            {/* Row 3: Random Forest Score */}
             <tr className="matrix-row">
               <td className="matrix-row-label">
                 <div className="row-label-content">
                   <Grid className="row-icon" />
                   <div>
-                    <div className="row-title">{isSimpleMode ? "Quantum AI Score" : "Quantum Score"}</div>
-                    <div className="row-sub">{isSimpleMode ? "QUANTUM PHYSICS SIMULATION" : "SUBATOMIC PROBABILITIES"}</div>
+                    <div className="row-title">{isSimpleMode ? "Random Forest Score" : "Random Forest Score"}</div>
+                    <div className="row-sub">{isSimpleMode ? "BAGGED DECISION TREES" : "BOOTSTRAP AGGREGATION"}</div>
                   </div>
                 </div>
               </td>
-              {items.map((mol, i) => (
-                <td key={i} className="matrix-cell">
-                  <div className="cell-content">
-                    <div className="matrix-q-bar-bg">
-                      <motion.div
-                        className="matrix-q-bar-fill"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${mol.quantum_prob * 100}%` }}
-                        transition={{ duration: 1, delay: i * 0.2 }}
-                        style={{ backgroundColor: getColor(mol.prediction, true), boxShadow: `0 0 10px ${getColor(mol.prediction, true)}` }}
-                      />
+              {items.map((mol, i) => {
+                const rfScore = mol.rf_prob !== undefined ? mol.rf_prob : mol.quantum_prob;
+                return (
+                  <td key={i} className="matrix-cell">
+                    <div className="cell-content">
+                      <div className="matrix-q-bar-bg">
+                        <motion.div
+                          className="matrix-q-bar-fill"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${rfScore * 100}%` }}
+                          transition={{ duration: 1, delay: i * 0.2 }}
+                          style={{ backgroundColor: getColor(mol.prediction, true), boxShadow: `0 0 10px ${getColor(mol.prediction, true)}` }}
+                        />
+                      </div>
+                      <div className="matrix-q-labels">
+                        <span className="q-label">RF-VAL</span>
+                        <span className="q-val" style={{ color: getColor(mol.prediction, true) }}>
+                          {(rfScore * 100).toFixed(0)}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="matrix-q-labels">
-                      <span className="q-label">QM-VAL</span>
-                      <span className="q-val" style={{ color: getColor(mol.prediction, true) }}>
-                        {(mol.quantum_prob * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                  </div>
-                </td>
-              ))}
+                  </td>
+                );
+              })}
             </tr>
 
-            {/* Row 4: Hybrid Fusion */}
+            {/* Row 4: Ensemble Consensus */}
             <tr className="matrix-row">
               <td className="matrix-row-label">
                 <div className="row-label-content">
                   <Zap className="row-icon" />
                   <div>
-                    <div className="row-title">{isSimpleMode ? "Overall Confidence" : "Hybrid Fusion"}</div>
-                    <div className="row-sub">{isSimpleMode ? "COMBINED AI PREDICTION" : "ML + QUANTUM ENGINE"}</div>
+                    <div className="row-title">{isSimpleMode ? "Overall Confidence" : "Ensemble Consensus"}</div>
+                    <div className="row-sub">{isSimpleMode ? "COMBINED AI PREDICTION" : "55% XGB + 45% RF"}</div>
                   </div>
                 </div>
               </td>
               {items.map((mol, i) => {
                 const bars = getHashBars(mol.smiles);
                 const color = getColor(mol.prediction, true);
+                const ensScore = mol.ensemble_prob !== undefined ? mol.ensemble_prob : mol.hybrid_prob;
                 return (
                   <td key={i} className="matrix-cell">
                     <div className="cell-content center">
@@ -195,7 +199,7 @@ const ComparisonTab = ({ items, onRemove, isSimpleMode }) => {
                         ))}
                       </div>
                       <div className="hybrid-label" style={{ color }}>
-                        RES-{(mol.hybrid_prob).toFixed(2)}
+                        RES-{(ensScore).toFixed(2)}
                       </div>
                     </div>
                   </td>

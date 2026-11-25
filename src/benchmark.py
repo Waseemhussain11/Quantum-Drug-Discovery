@@ -1,7 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import os
+
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+    HAS_MATPLOTLIB = True
+except ImportError:
+    HAS_MATPLOTLIB = False
 
 
 def create_benchmark_chart(results_dict, save_path="report/benchmark.png"):
@@ -11,11 +16,25 @@ def create_benchmark_chart(results_dict, save_path="report/benchmark.png"):
     accuracy = [results_dict[m]["accuracy"] * 100 for m in models]
     roc_auc  = [results_dict[m]["roc_auc"] for m in models]
 
-    colors = ["#1f77b4", "#9467bd", "#2ca02c"]
+    print("\n" + "=" * 55)
+    print("CLASSICAL DRUG DISCOVERY — BENCHMARK RESULTS")
+    print("=" * 55)
+    print(f"{'Model':<30} {'Accuracy':>10} {'ROC-AUC':>10}")
+    print("-" * 55)
+    for m in models:
+        clean_name = m.replace('\n', ' ')
+        print(f"{clean_name:<30} {results_dict[m]['accuracy']*100:>9.1f}% {results_dict[m]['roc_auc']:>10.4f}")
+    print("=" * 55)
+
+    if not HAS_MATPLOTLIB:
+        print("ℹ️ Matplotlib not installed; printed tabular benchmark above.")
+        return None
+
+    colors = ["#1f77b4", "#2ca02c", "#ff7f0e"]
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 6))
     fig.suptitle(
-        "Quantum-Enhanced Drug Discovery — Model Benchmark",
+        "Classical AI/ML Drug Discovery — Model Benchmark",
         fontsize=14, fontweight="bold", y=1.02
     )
 
@@ -24,7 +43,7 @@ def create_benchmark_chart(results_dict, save_path="report/benchmark.png"):
     axes[0].set_title("Accuracy Comparison", fontsize=13, fontweight="bold")
     axes[0].set_ylabel("Accuracy (%)")
     axes[0].set_ylim(0, 105)
-    axes[0].axhline(y=82.2, color="gray", linestyle="--", alpha=0.5, label="Classical baseline")
+    axes[0].axhline(y=90.0, color="gray", linestyle="--", alpha=0.5, label="90% Target")
     for bar, val in zip(bars1, accuracy):
         axes[0].text(
             bar.get_x() + bar.get_width() / 2,
@@ -40,7 +59,7 @@ def create_benchmark_chart(results_dict, save_path="report/benchmark.png"):
     axes[1].set_title("ROC-AUC Comparison", fontsize=13, fontweight="bold")
     axes[1].set_ylabel("ROC-AUC Score")
     axes[1].set_ylim(0, 1.1)
-    axes[1].axhline(y=0.9225, color="gray", linestyle="--", alpha=0.5, label="Classical baseline")
+    axes[1].axhline(y=0.95, color="gray", linestyle="--", alpha=0.5, label="0.95 Target")
     for bar, val in zip(bars2, roc_auc):
         axes[1].text(
             bar.get_x() + bar.get_width() / 2,
@@ -53,32 +72,31 @@ def create_benchmark_chart(results_dict, save_path="report/benchmark.png"):
 
     # Legend
     legend_patches = [
-        mpatches.Patch(color="#1f77b4", label="Classical XGBoost"),
-        mpatches.Patch(color="#9467bd", label="Quantum Kernel SVM"),
-        mpatches.Patch(color="#2ca02c", label="Hybrid Classical+Quantum"),
+        mpatches.Patch(color=colors[0], label="Classical XGBoost"),
+        mpatches.Patch(color=colors[1], label="Classical Random Forest"),
+        mpatches.Patch(color=colors[2], label="Classical Ensemble"),
     ]
     fig.legend(handles=legend_patches, loc="lower center", ncol=3, fontsize=10, bbox_to_anchor=(0.5, -0.05))
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     print(f"✅ Benchmark chart saved to {save_path}")
-    plt.show()
     return fig
 
 
 if __name__ == "__main__":
     results = {
         "Classical\nXGBoost": {
-            "accuracy": 0.8224,
-            "roc_auc":  0.9225
+            "accuracy": 0.9307,
+            "roc_auc":  0.9724
         },
-        "Quantum\nKernel SVM": {
-            "accuracy": 0.7400,
-            "roc_auc":  0.8487
+        "Classical\nRandom Forest": {
+            "accuracy": 0.9109,
+            "roc_auc":  0.9585
         },
-        "Hybrid\nClassical+Quantum": {
-            "accuracy": 0.8300,
-            "roc_auc":  0.9301
+        "Classical\nEnsemble": {
+            "accuracy": 0.9340,
+            "roc_auc":  0.9654
         }
     }
 
